@@ -1,0 +1,1282 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>10조 메카독 프로젝트</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: 프로젝트 허브 — 머리말 + 탭 바(1안 · 2안 · 탈락) → 선택한 탭의 페이지(섀도 DOM으로 격리) */
+:root{--bg:#eceeec;--surface:#f8f9f8;--ink:#1c2220;--muted:#5b6662;--line:#c9d0cc;--accent:#d9a520;
+  --font-sans:"IBM Plex Sans KR",system-ui,-apple-system,"Malgun Gothic",sans-serif;--font-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#131715;--surface:#1b201e;--ink:#e3e8e5;--muted:#97a39e;--line:#323b37;--accent:#e3b33a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#131715;--surface:#1b201e;--ink:#e3e8e5;--muted:#97a39e;--line:#323b37;--accent:#e3b33a;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-size:14px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.hub{max-width:1240px;margin:0 auto;display:grid;gap:14px}
+.hub-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px}
+.hub-head .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.hub-head h1{margin:2px 0 0;font-size:20px;font-weight:700;text-wrap:balance}
+nav.tabs{display:flex;flex-wrap:wrap;gap:6px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:8px;border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+nav.tabs a{font:inherit;font-size:14px;font-weight:600;color:var(--muted);text-decoration:none;padding:8px 14px;border-radius:6px;border:1px solid transparent}
+nav.tabs a:hover{color:var(--ink);border-color:var(--line)}
+nav.tabs a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+nav.tabs a[aria-current="page"]{color:var(--bg);background:var(--ink)}
+nav.tabs a span{font-family:var(--font-mono);font-size:11px;font-weight:600;margin-right:6px;opacity:.75}
+.view{min-width:0}
+</style>
+
+</head>
+<body>
+<div class="hub">
+  <div class="hub-head">
+    <div><div class="eyebrow">10조 · 피지컬 AI 프로젝트</div><h1>메카독 화재 대응 아이디어</h1></div>
+  </div>
+  <nav class="tabs" aria-label="페이지">
+    <a href="#plan1" data-tab="plan1"><span>1안</span>대피로 순찰</a>
+    <a href="#plan2" data-tab="plan2"><span>2안</span>요구조자 수색</a>
+    <a href="#dropped" data-tab="dropped"><span>기록</span>탈락한 아이디어</a>
+  </nav>
+  <div class="view" id="v-plan1" hidden></div>
+  <div class="view" id="v-plan2" hidden></div>
+  <div class="view" id="v-dropped" hidden></div>
+</div>
+
+<template id="tpl-plan1"><style>
+/* Layout: 1안 시연 관제 화면 — 요약 → 화재 신호 흐름 → 컨트롤(장면·불 위치) → [실제 / 시연] 동기 재생(좌) + 대피로망·4대 상태(우) → 유도등 비교 → 역할 → 대본 → 부품 */
+:host{
+  --bg:#eceeec; --surface:#f8f9f8; --ink:#1c2220; --muted:#5b6662; --line:#c9d0cc;
+  --floor:#e2e5e2; --floor2:#d6dbd7; --route:#24935c; --route-bg:#dcefe3; --card:#e0a800;
+  --box:#c9b48f; --box2:#b39c74; --box-ink:#4a3f2c; --wall:#59635f; --rack:#7b8a9a; --machine:#9fb0bb; --hatch:#e5c200;
+  --accent:#e0a800; --robot:#d9a520; --led-on:#ff5a3c; --signal:#7a4fc0; --person:#2f6db0;
+  --ok:#2e8a55; --warn:#c07d00; --crit:#cc3229; --ok-bg:#dcefe3; --warn-bg:#f6e8c8; --crit-bg:#f7dad6;
+  --font-sans:"IBM Plex Sans KR",system-ui,-apple-system,"Malgun Gothic",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:host(:not(.force-light)){
+  --bg:#131715; --surface:#1b201e; --ink:#e3e8e5; --muted:#97a39e; --line:#323b37;
+  --floor:#202624; --floor2:#2a312e; --route:#46c083; --route-bg:#1b3326; --card:#e8b820;
+  --box:#6b5d43; --box2:#584b34; --box-ink:#efe2c6; --wall:#8b9893; --rack:#7f93a8; --machine:#4b5a63; --hatch:#a88d10;
+  --accent:#e8b820; --robot:#e3b33a; --led-on:#ff6a4d; --signal:#ad86e6; --person:#5c9be0;
+  --ok:#55c084; --warn:#e3a43a; --crit:#f0645c; --ok-bg:#1b3326; --warn-bg:#3a2e14; --crit-bg:#3d1d1b; color-scheme:dark;
+}}
+:host(.force-dark){
+  --bg:#131715; --surface:#1b201e; --ink:#e3e8e5; --muted:#97a39e; --line:#323b37;
+  --floor:#202624; --floor2:#2a312e; --route:#46c083; --route-bg:#1b3326; --card:#e8b820;
+  --box:#6b5d43; --box2:#584b34; --box-ink:#efe2c6; --wall:#8b9893; --rack:#7f93a8; --machine:#4b5a63; --hatch:#a88d10;
+  --accent:#e8b820; --robot:#e3b33a; --led-on:#ff6a4d; --signal:#ad86e6; --person:#5c9be0;
+  --ok:#55c084; --warn:#e3a43a; --crit:#f0645c; --ok-bg:#1b3326; --warn-bg:#3a2e14; --crit-bg:#3d1d1b; color-scheme:dark;
+}
+*{box-sizing:border-box}
+.page{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-size:14px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1240px;margin:0 auto;display:grid;gap:20px}
+h1,h2,h3{text-wrap:balance;margin:0;line-height:1.25}
+h1{font-size:26px;font-weight:700;letter-spacing:-.01em}
+h2{font-size:17px;font-weight:600}
+h3{font-size:14px;font-weight:600}
+p{margin:0}
+.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 7px;border-radius:4px;font-weight:600;vertical-align:middle;background:var(--ink);color:var(--bg)}
+.tag.ok{background:var(--ok-bg);color:var(--ok)} .tag.warn{background:var(--warn-bg);color:var(--warn)}
+.lead{font-size:16px;max-width:72ch;margin-top:8px}
+button{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button.fire.on{background:var(--crit);border-color:var(--crit);color:#fff}
+input[type=range]{accent-color:var(--accent);width:100%}
+.why{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.why > div{background:var(--surface);padding:14px 16px;display:grid;gap:6px;align-content:start}
+.why ul{margin:0;padding-left:18px;display:grid;gap:4px;font-size:13px}
+@media (max-width:820px){.why{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;display:grid;gap:12px;min-width:0}
+.panel-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px}
+.btns{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.btns .lab{font-size:12px;color:var(--muted);margin-right:2px}
+.clock{font-family:var(--font-mono);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;min-width:4.5ch}
+.chapter{font-size:13.5px;color:var(--muted);min-height:2.8em}
+.chapter b{color:var(--ink)}
+.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:28px}
+.flow > div{border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--bg);display:grid;gap:3px;position:relative}
+.flow > div:not(:last-child)::after{content:"→";position:absolute;right:-21px;top:50%;transform:translateY(-50%);color:var(--muted);font-weight:700}
+.flow b{font-size:13.5px} .flow span{font-size:12px;color:var(--muted)}
+.flow .robot{border-color:var(--robot)}
+@media (max-width:820px){.flow{grid-template-columns:minmax(0,1fr);gap:22px}.flow > div:not(:last-child)::after{content:"↓";right:auto;left:50%;top:auto;bottom:-20px;transform:none}}
+
+.main{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
+.maps{display:grid;gap:20px;min-width:0}
+aside.state{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+@media (max-width:1000px){.main{grid-template-columns:minmax(0,1fr)} aside.state{position:static}}
+.view-label{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.view-label .num{font-family:var(--font-mono);font-size:12px;font-weight:600;padding:2px 8px;border-radius:4px;background:var(--ink);color:var(--bg)}
+.mapbox{overflow-x:auto;border-radius:6px}
+.mapbox svg{display:block;width:100%;min-width:600px;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:14px;height:8px;border-radius:2px;vertical-align:1px;margin-right:5px}
+
+.exits{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.exit{border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:var(--bg);display:grid;gap:1px;border-left-width:4px}
+.exit span{font-size:11.5px;color:var(--muted)} .exit b{font-size:14px}
+.exit.ok{border-left-color:var(--ok)} .exit.ok b{color:var(--ok)}
+.exit.crit{border-left-color:var(--crit);background:var(--crit-bg)} .exit.crit b{color:var(--crit)}
+.segs{display:grid;gap:5px}
+.seg{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;font-size:12.5px;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);border-left-width:4px}
+.seg.ok{border-left-color:var(--ok)} .seg.warn{border-left-color:var(--warn)} .seg.crit{border-left-color:var(--crit);background:var(--crit-bg)} .seg.sig{border-left-color:var(--signal)}
+.seg b{font-weight:600;font-size:12px}
+.fleet{display:grid;gap:6px}
+.fbot{display:grid;grid-template-columns:30px minmax(0,1fr) 64px;gap:2px 10px;align-items:center;padding:7px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.fbot .n{width:28px;height:28px;border-radius:6px;background:var(--robot);color:#1c2220;display:grid;place-items:center;font-family:var(--font-mono);font-weight:700;font-size:11px;grid-row:span 2}
+.fbot b{font-size:13px}
+.fbot small{font-size:11.5px;color:var(--muted);grid-column:2/3;min-width:0}
+.fbot svg{grid-row:span 2;width:64px;height:32px;background:#262b29;border-radius:4px;padding:2px}
+.log{list-style:none;margin:0;padding:0;display:grid;gap:5px;font-size:12.5px;max-height:190px;overflow:auto}
+.log li{display:grid;grid-template-columns:40px minmax(0,1fr);gap:8px;padding-left:8px;border-left:3px solid var(--line)}
+.log li.w{border-left-color:var(--warn)} .log li.c{border-left-color:var(--crit)} .log li.g{border-left-color:var(--ok)} .log li.s{border-left-color:var(--signal)}
+.log time{font-family:var(--font-mono);color:var(--muted)}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px;min-width:640px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:500}
+td.t{font-family:var(--font-mono);white-space:nowrap;color:var(--muted)}
+td.rb{font-family:var(--font-mono);font-weight:700;white-space:nowrap}
+td.ar{font-family:var(--font-mono);font-weight:700;font-size:15px}
+td.win{color:var(--ok);font-weight:600}
+.callout{border:1px dashed var(--line);border-radius:6px;padding:12px 14px;font-size:13px;display:grid;gap:6px}
+@keyframes blink{50%{opacity:.25}}
+.blink{animation:blink .6s steps(1) infinite}
+@keyframes pulse{50%{opacity:.45}}
+.glow{animation:pulse 1.6s ease-in-out infinite}
+@keyframes dash{to{stroke-dashoffset:-20}}
+.sig{animation:dash .8s linear infinite}
+@media (prefers-reduced-motion:reduce){.blink,.glow,.sig{animation:none}}
+
+[hidden]{display:none!important}
+.page{padding-left:0;padding-right:0;padding-block:8px 24px}
+</style><div class="page">
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">1안 · MechDog × 4대 · 작업장</div>
+    <h1>메카독 대피로 순찰 <span class="tag">1안</span></h1>
+    <p class="lead">평소에는 4대가 작업장 전체의 대피로를 나눠 걸으며 막힌 곳을 찾습니다. 불이 나면 각자 맡은 갈림길에 서서, 불이 난 반대쪽 비상구로 화살표를 바꿔 모든 사람에게 방향을 알려주는 "움직이는 유도등"이 됩니다.</p>
+  </header>
+
+  <section class="why" aria-label="배경과 목적">
+    <div>
+      <div class="eyebrow">배경</div>
+      <ul>
+        <li>비상구와 피난 통로 앞 적치물이 현장에서 자주 적발됨</li>
+        <li>고정 유도등은 항상 가장 가까운 비상구만 가리켜, 불이 그쪽에서 나면 사람을 불 쪽으로 보냄</li>
+        <li>작업장 화재에서 작업자가 대피 방향을 놓침 (화성 아리셀 공장, 2024)</li>
+      </ul>
+    </div>
+    <div>
+      <div class="eyebrow">평소 · 대피로망 점검</div>
+      <ul>
+        <li>간선과 구역별 지선을 4대가 나눠서 매일 걸어봄</li>
+        <li>길을 막는 물건을 초음파로 감지하면 멈추고 관리자 호출</li>
+        <li>구간별로 마지막 통과 확인 시각이 기록됨</li>
+      </ul>
+    </div>
+    <div>
+      <div class="eyebrow">화재 시 · 갈림길 안내</div>
+      <ul>
+        <li>4대가 사람들이 방향을 고르는 갈림길 4곳으로 이동</li>
+        <li>불 위치에 따라 안전한 비상구 쪽으로 화살표·음성 안내</li>
+        <li>불 쪽으로 가는 길은 X 표시로 막음</li>
+        <li>어느 구역에서 출발하든 갈림길을 지나므로 전원이 안내받음</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>화재는 어떻게 알까</h2><span class="muted" style="font-size:12px">감지는 기존 설비, 방향 안내는 로봇</span></div>
+    <div class="flow">
+      <div><b>천장 화재 감지기</b><span>이미 설치된 법정 설비 · 어느 구역인지 앎</span></div>
+      <div><b>화재 수신기</b><span>방재실 · 발화 구역 확인</span></div>
+      <div><b>Wi-Fi 신호</b><span>발화 구역 정보 → 로봇 4대</span></div>
+      <div class="robot"><b>갈림길 안내 모드</b><span>불 반대쪽 비상구로 화살표 결정</span></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div class="btns" role="group" aria-label="장면 이동">
+        <button type="button" data-ch="0">① 대피로망 점검</button>
+        <button type="button" data-ch="1">② 막힘 발견</button>
+        <button type="button" data-ch="2">③ 화재 · 갈림길 안내</button>
+      </div>
+      <div class="btns">
+        <span class="clock" id="clock">0:00</span>
+        <button type="button" id="play">재생</button>
+        <button type="button" id="reset">처음부터</button>
+        <span class="btns" role="group" aria-label="재생 속도"><button type="button" data-spd="1">1×</button><button type="button" data-spd="2" class="on">2×</button><button type="button" data-spd="4">4×</button></span>
+      </div>
+    </div>
+    <div class="btns" role="group" aria-label="불 위치">
+      <span class="lab">불 위치</span>
+      <button type="button" class="fire on" data-fire="W">서쪽 · 비상구 1 쪽</button>
+      <button type="button" class="fire" data-fire="E">동쪽 · 비상구 2 쪽</button>
+      <span class="muted" style="font-size:12px">바꾸면 로봇 화살표와 사람들의 대피 방향이 함께 바뀝니다</span>
+    </div>
+    <input type="range" id="slider" min="0" max="100" step="0.05" value="0" aria-label="진행">
+    <p class="chapter" id="chapter"></p>
+  </section>
+
+  <div class="main">
+    <div class="maps">
+      <section class="panel">
+        <div class="view-label"><span class="num">실제</span><h2>작업장 대피로망</h2><span class="muted" style="font-size:12px">예시 레이아웃 · 약 40m × 24m</span></div>
+        <div class="mapbox"><svg id="real" viewBox="0 0 1000 600" role="img" aria-label="실제 사업장 평면도: 대피로망, 갈림길 4곳, 비상구 2곳, 메카독 4대와 작업자"></svg></div>
+        <div class="legend">
+          <span><i style="background:var(--route)"></i>대피로망 (점검 경로)</span>
+          <span><i style="background:var(--robot)"></i>메카독 · 갈림길</span>
+          <span><i style="background:var(--person);border-radius:50%;width:8px"></i>작업자</span>
+          <span><i style="background:var(--ok)"></i>고정 유도등</span>
+          <span><i style="background:var(--signal)"></i>화재 신호</span>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="view-label"><span class="num">시연</span><h2>우리 시연은 이런 느낌</h2><span class="muted" style="font-size:12px">축소 모형 · 바닥 3m × 2m · 메카독 4대 · 팀원 3명</span></div>
+        <div class="mapbox"><svg id="demo" viewBox="0 0 620 420" role="img" aria-label="시연용 바닥 모형: 초록 테이프 대피로망, 갈림길, 비상구 2곳, 메카독 4대, 팀원 3명"></svg></div>
+        <div class="legend">
+          <span><i style="background:var(--route)"></i>초록 테이프 = 대피로망</span>
+          <span><i style="background:var(--box)"></i>박스 = 장애물 · 작업 구역</span>
+          <span><i style="background:var(--signal)"></i>노트북 = 화재 수신기 역할</span>
+        </div>
+      </section>
+    </div>
+
+    <aside class="panel state">
+      <h2>비상구</h2>
+      <div class="exits">
+        <div class="exit ok" id="ex1"><span>비상구 1 (서쪽)</span><b>사용 가능</b></div>
+        <div class="exit ok" id="ex2"><span>비상구 2 (동쪽)</span><b>사용 가능</b></div>
+      </div>
+      <h3>대피로 구간</h3>
+      <div class="segs" id="segs"></div>
+      <h3>메카독 4대 · 매트릭스</h3>
+      <div class="fleet" id="fleet"></div>
+      <h3>관제 로그</h3>
+      <ul class="log" id="log"></ul>
+    </aside>
+  </div>
+
+  <section class="panel">
+    <h2>고정 유도등 vs 메카독</h2>
+    <div class="tbl"><table>
+      <thead><tr><th></th><th>고정 유도등</th><th>메카독 갈림길 안내</th></tr></thead>
+      <tbody>
+        <tr><td>가리키는 곳</td><td>항상 가장 가까운 비상구</td><td class="win">불이 난 반대쪽 비상구</td></tr>
+        <tr><td>불이 비상구 쪽에서 나면</td><td>사람을 불 쪽으로 보냄</td><td class="win">화살표를 반대로 바꾸고 X로 길을 막음</td></tr>
+        <tr><td>길이 막혀 있으면</td><td>알 수 없음</td><td class="win">평소 점검으로 미리 치움</td></tr>
+        <tr><td>알리는 방법</td><td>불빛 표지</td><td>화살표 + 음성 "오른쪽으로 대피하세요"</td></tr>
+        <tr><td>역할</td><td colspan="2">대체가 아니라 보완 · 유도등이 틀릴 수 있는 상황에서 로봇이 바로잡음</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="panel">
+    <h2>메카독 4대 역할</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>로봇</th><th>평소 점검 구간</th><th>화재 시 갈림길</th><th>불이 서쪽일 때</th><th>불이 동쪽일 때</th></tr></thead>
+      <tbody>
+        <tr><td class="rb">MD1</td><td>왼쪽 통로 → 비상구 1</td><td>간선 서쪽 끝</td><td class="ar">→ <span class="muted" style="font-size:12px;font-weight:400">비상구 1 막힘, 동쪽으로</span></td><td class="ar">← <span class="muted" style="font-size:12px;font-weight:400">비상구 1로</span></td></tr>
+        <tr><td class="rb">MD2</td><td>랙 동쪽 · 조립 라인 지선</td><td>조립 라인 → 간선 합류점</td><td class="ar">↓</td><td class="ar">↓</td></tr>
+        <tr><td class="rb">MD3</td><td>중앙 간선 · 사무실·포장 지선</td><td>간선 가운데</td><td class="ar">→</td><td class="ar">←</td></tr>
+        <tr><td class="rb">MD4</td><td>동쪽 간선 → 비상구 2</td><td>에이징실 옆 갈림길</td><td class="ar">→ <span class="muted" style="font-size:12px;font-weight:400">비상구 2로</span></td><td class="ar">X <span class="muted" style="font-size:12px;font-weight:400">진입 금지</span></td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout"><b>2안과 연결</b><p>갈림길 안내로도 나오지 못한 사람은 2안처럼 수색으로 찾습니다. 대피가 끝나면 4대가 수색 모드로 바뀌는 식으로 두 안을 합칠 수 있습니다.</p></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>시연 대본</h2><span class="muted" style="font-size:12px">약 4분 · 세부는 나중에 조정</span></div>
+    <div class="tbl"><table>
+      <thead><tr><th>시간</th><th>장면</th><th>무엇을 보여주나</th></tr></thead>
+      <tbody>
+        <tr><td class="t">0:00–0:40</td><td>문제 제기</td><td>고정 유도등은 불이 어디서 났는지 모르고 가장 가까운 비상구만 가리킨다.</td></tr>
+        <tr><td class="t">0:40–1:30</td><td>① 대피로망 점검</td><td>4대가 초록 테이프 구간을 나눠 걷는다.</td></tr>
+        <tr><td class="t">1:30–2:20</td><td>② 막힘 발견</td><td>간선에 놓인 박스를 MD3이 감지하고 멈춰 X·음성으로 알린다. 팀원이 치우면 다시 통과 확인.</td></tr>
+        <tr><td class="t">2:20–3:20</td><td>③ 화재 · 갈림길 안내</td><td>노트북에서 "서쪽 화재"를 누르면 4대가 갈림길로 가서 →를 띄운다. 세 구역에서 걸어 나온 팀원들이 화살표를 보고 비상구 2로 나간다.</td></tr>
+        <tr><td class="t">3:20–3:50</td><td>반전</td><td>"동쪽 화재"로 다시 하면 화살표가 ←로 바뀌고 MD4가 X로 길을 막는다. 같은 로봇이 불 위치에 따라 다르게 안내한다.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="panel">
+    <h2>쓰는 기능 <span class="tag ok">전부 Advanced Kit 포함</span></h2>
+    <div class="tbl"><table>
+      <thead><tr><th>기능</th><th>부품</th></tr></thead>
+      <tbody>
+        <tr><td>대피로 따라 걷기</td><td>ESP32-S3 비전 모듈 (라인 추적)</td></tr>
+        <tr><td>길 막힘 감지</td><td>초음파 거리센서</td></tr>
+        <tr><td>방향 화살표, X, 상태</td><td>LED 도트매트릭스, 초음파 RGB</td></tr>
+        <tr><td>음성 안내</td><td>MP3 모듈</td></tr>
+        <tr><td>화재 신호·불 위치 받기</td><td>ESP32 Wi-Fi ← 노트북 버튼 <span class="tag warn">코딩</span></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+</div>
+
+</div></template>
+<template id="tpl-plan2"><style>
+/* Layout: 2안 아이디어 페이지 — 요약 → 배경·목적 → 수색 시뮬레이션(좌)+휴대폰 알림(우) → 다리로 찾는 이유 → 1안 비교 → 시연 그림 */
+:host{
+  --bg:#eceeec; --surface:#f8f9f8; --ink:#1c2220; --muted:#5b6662; --line:#c9d0cc;
+  --floor:#e2e5e2; --floor2:#d6dbd7; --box:#c9b48f; --box2:#b39c74; --box-ink:#4a3f2c; --wall:#59635f; --rack:#7b8a9a; --machine:#9fb0bb;
+  --accent:#e0a800; --robot:#d9a520; --signal:#7a4fc0; --smoke:#6b6f72;
+  --z1:#2f6db0; --z2:#18876c; --z3:#8456c0; --z4:#c4562a;
+  --ok:#2e8a55; --warn:#c07d00; --crit:#cc3229; --ok-bg:#dcefe3; --warn-bg:#f6e8c8; --crit-bg:#f7dad6;
+  --fire:#d4561c; --phone:#15191b; --phone-ink:#eef1ef; --phone-card:#252b2e;
+  --font-sans:"IBM Plex Sans KR",system-ui,-apple-system,"Malgun Gothic",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:host(:not(.force-light)){
+  --bg:#131715; --surface:#1b201e; --ink:#e3e8e5; --muted:#97a39e; --line:#323b37;
+  --floor:#202624; --floor2:#2a312e; --box:#6b5d43; --box2:#584b34; --box-ink:#efe2c6; --wall:#8b9893; --rack:#7f93a8; --machine:#4b5a63;
+  --accent:#e8b820; --robot:#e3b33a; --signal:#ad86e6; --smoke:#9aa0a3;
+  --z1:#5c9be0; --z2:#3fbf9c; --z3:#ad86e6; --z4:#ec8152;
+  --ok:#55c084; --warn:#e3a43a; --crit:#f0645c; --ok-bg:#1b3326; --warn-bg:#3a2e14; --crit-bg:#3d1d1b;
+  --fire:#f08a4b; --phone:#0b0d0e; --phone-ink:#eef1ef; --phone-card:#1e2427; color-scheme:dark;
+}}
+:host(.force-dark){
+  --bg:#131715; --surface:#1b201e; --ink:#e3e8e5; --muted:#97a39e; --line:#323b37;
+  --floor:#202624; --floor2:#2a312e; --box:#6b5d43; --box2:#584b34; --box-ink:#efe2c6; --wall:#8b9893; --rack:#7f93a8; --machine:#4b5a63;
+  --accent:#e8b820; --robot:#e3b33a; --signal:#ad86e6; --smoke:#9aa0a3;
+  --z1:#5c9be0; --z2:#3fbf9c; --z3:#ad86e6; --z4:#ec8152;
+  --ok:#55c084; --warn:#e3a43a; --crit:#f0645c; --ok-bg:#1b3326; --warn-bg:#3a2e14; --crit-bg:#3d1d1b;
+  --fire:#f08a4b; --phone:#0b0d0e; --phone-ink:#eef1ef; --phone-card:#1e2427; color-scheme:dark;
+}
+*{box-sizing:border-box}
+.page{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-size:14px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1200px;margin:0 auto;display:grid;gap:20px}
+h1,h2,h3{text-wrap:balance;margin:0;line-height:1.25}
+h1{font-size:26px;font-weight:700;letter-spacing:-.01em}
+h2{font-size:17px;font-weight:600}
+p{margin:0}
+.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 7px;border-radius:4px;font-weight:600;vertical-align:middle;background:var(--ink);color:var(--bg)}
+.lead{font-size:16px;max-width:70ch;margin-top:8px}
+button{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+input[type=range]{accent-color:var(--accent);width:100%}
+.why{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.why > div{background:var(--surface);padding:14px 16px;display:grid;gap:6px;align-content:start}
+.why ul{margin:0;padding-left:18px;display:grid;gap:4px;font-size:13px}
+@media (max-width:820px){.why{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;display:grid;gap:12px;min-width:0}
+.panel-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px}
+.btns{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.clock{font-family:var(--font-mono);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;min-width:4.5ch}
+.step{font-size:13.5px;color:var(--muted);min-height:2.8em}
+.step b{color:var(--ink)}
+.main{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start}
+@media (max-width:980px){.main{grid-template-columns:minmax(0,1fr)}}
+.mapbox{overflow-x:auto;border-radius:6px}
+.mapbox svg{display:block;width:100%;min-width:600px;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px}
+
+.phone{background:var(--phone);color:var(--phone-ink);border-radius:28px;padding:14px 12px 18px;border:6px solid #2c3235;display:grid;gap:10px;align-content:start;min-height:520px}
+.phone .bar{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:11px;opacity:.8;padding:0 6px}
+.phone .app{font-size:12px;opacity:.7;padding:0 6px}
+.notes{display:grid;gap:8px}
+.note{background:var(--phone-card);border-radius:12px;padding:10px 12px;display:grid;gap:4px;font-size:12.5px;border-left:4px solid #6b7275}
+.note.found{border-left-color:#ff5a4d}
+.note.clear{border-left-color:#4fc184}
+.note.sig{border-left-color:#ad86e6}
+.note.ff{border-left-color:#f08a4b}
+.note b{font-size:13px}
+.note small{font-family:var(--font-mono);font-size:10.5px;opacity:.65}
+.note .cap{height:54px;border-radius:6px;background:#3a4144;display:grid;place-items:end center;overflow:hidden}
+.note .cap svg{width:100%;height:100%}
+.empty{font-size:12px;opacity:.6;padding:20px 8px;text-align:center}
+
+.side svg{display:block;width:100%;height:auto;max-width:720px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px;min-width:600px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:500}
+td:first-child{color:var(--muted);white-space:nowrap}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+@media (max-width:860px){.grid2{grid-template-columns:minmax(0,1fr)}}
+ol.flow{margin:0;padding-left:22px;display:grid;gap:8px;font-size:13.5px}
+ol.flow li::marker{font-family:var(--font-mono);color:var(--muted)}
+ul.plain{margin:0;padding-left:18px;display:grid;gap:6px;font-size:13px}
+@keyframes blink{50%{opacity:.25}}
+.blink{animation:blink .6s steps(1) infinite}
+@keyframes pulse{50%{opacity:.45}}
+.glow{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pop{from{transform:translateY(-6px);opacity:0}to{transform:none;opacity:1}}
+.note{animation:pop .35s ease-out}
+@media (prefers-reduced-motion:reduce){.blink,.glow,.note{animation:none}}
+
+[hidden]{display:none!important}
+.page{padding-left:0;padding-right:0;padding-block:8px 24px}
+</style><div class="page">
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">2안 · MechDog × 4대 · 작업장</div>
+    <h1>메카독 요구조자 수색 <span class="tag">2안</span></h1>
+    <p class="lead">평소에는 관리실에서 충전만 합니다. 불이 나면 4대가 구역을 나눠 출동해, 미처 대피하지 못한 사람을 다리로 찾아내고 관리자와 소방대 휴대폰으로 위치를 알립니다.</p>
+  </header>
+
+  <section class="why" aria-label="배경과 목적">
+    <div>
+      <div class="eyebrow">배경</div>
+      <ul>
+        <li>대피 뒤에도 안에 누가 남았는지 바로 알기 어려움</li>
+        <li>소방대가 연기 속을 구역마다 뒤지느라 시간이 걸림</li>
+        <li>리튬배터리 화재는 연기와 유독가스가 빠르게 퍼져 사람이 다시 들어가기 위험함</li>
+      </ul>
+    </div>
+    <div>
+      <div class="eyebrow">목적</div>
+      <ul>
+        <li>사람 대신 들어가서 남은 사람이 있는지 먼저 확인</li>
+        <li>찾으면 위치와 사진을 휴대폰으로 즉시 전송</li>
+        <li>사람이 없는 구역도 "없음"으로 알려 수색 범위를 줄임</li>
+      </ul>
+    </div>
+    <div>
+      <div class="eyebrow">왜 메카독인가</div>
+      <ul>
+        <li>연기는 위로 차고 바닥 근처는 마지막까지 보임</li>
+        <li>낮은 카메라라 얼굴이 아니라 다리, 쓰러진 사람을 봄</li>
+        <li>평소 순찰을 안 하니 출동할 때 항상 완충 상태</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div class="btns" role="group" aria-label="단계 이동">
+        <button type="button" data-st="0">① 관리실 대기</button>
+        <button type="button" data-st="1">② 화재 · 출동</button>
+        <button type="button" data-st="2">③ 수색 · 발견</button>
+        <button type="button" data-st="3">④ 소방대 마중</button>
+        <button type="button" data-st="4">⑤ 안내 · 구조</button>
+      </div>
+      <div class="btns">
+        <span class="clock" id="clock">0:00</span>
+        <button type="button" id="play">재생</button>
+        <button type="button" id="reset">처음부터</button>
+        <span class="btns" role="group" aria-label="재생 속도"><button type="button" data-spd="1">1×</button><button type="button" data-spd="2" class="on">2×</button><button type="button" data-spd="4">4×</button></span>
+      </div>
+    </div>
+    <input type="range" id="slider" min="0" max="100" step="0.05" value="0" aria-label="진행">
+    <p class="step" id="step"></p>
+  </section>
+
+  <div class="main">
+    <section class="panel">
+      <h2>수색 구역과 출동 경로</h2>
+      <div class="mapbox"><svg id="map" viewBox="0 0 1000 600" role="img" aria-label="사업장 평면도: 관리실에서 출발한 메카독 4대가 구역을 나눠 수색하고 남은 사람 2명을 발견"></svg></div>
+      <div class="legend">
+        <span><i style="background:var(--z1)"></i>구역 1 · 랙 (MD1)</span>
+        <span><i style="background:var(--z2)"></i>구역 2 · 조립 라인 (MD2)</span>
+        <span><i style="background:var(--z3)"></i>구역 3 · 포장·통로 (MD3)</span>
+        <span><i style="background:var(--z4)"></i>구역 4 · 입고 (MD4)</span>
+        <span><i style="background:var(--fire);border-radius:50%"></i>소방대</span>
+      </div>
+    </section>
+
+    <aside class="phone" aria-label="관리자 휴대폰 알림 화면">
+      <div class="bar"><span id="pclock">14:30</span><span>LTE ▮▮▮</span></div>
+      <div class="app">메카독 수색 알림 · 관리자 / 소방대</div>
+      <div class="notes" id="notes"><div class="empty">화재 신호가 오면 여기에 알림이 뜹니다</div></div>
+    </aside>
+  </div>
+
+  <section class="panel">
+    <h2>다리로 사람을 찾는 이유</h2>
+    <div class="side">
+      <svg viewBox="0 0 720 230" role="img" aria-label="측면도: 천장부터 연기가 차고, 바닥 근처에서 메카독 카메라가 서 있는 사람의 다리와 쓰러진 사람을 봄">
+        <defs><linearGradient id="smk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--smoke)" stop-opacity=".75"/><stop offset=".55" stop-color="var(--smoke)" stop-opacity=".45"/><stop offset="1" stop-color="var(--smoke)" stop-opacity="0"/></linearGradient></defs>
+        <rect x="0" y="0" width="720" height="150" fill="url(#smk)"/>
+        <line x1="0" y1="200" x2="720" y2="200" style="stroke:var(--wall)" stroke-width="3"/>
+        <text x="16" y="28" style="fill:var(--ink)" font-size="13" font-weight="600">연기층 · 위에서부터 참</text>
+        <text x="16" y="186" style="fill:var(--ok)" font-size="12" font-weight="600">바닥 근처 · 마지막까지 보임</text>
+        <!-- 메카독 -->
+        <g transform="translate(120,172)">
+          <rect x="-34" y="-14" width="68" height="18" rx="6" style="fill:var(--robot);stroke:var(--ink)"/>
+          <rect x="-28" y="4" width="6" height="24" rx="2" style="fill:var(--robot);stroke:var(--ink)"/>
+          <rect x="22" y="4" width="6" height="24" rx="2" style="fill:var(--robot);stroke:var(--ink)"/>
+          <rect x="30" y="-22" width="14" height="12" rx="2" style="fill:var(--ink)"/>
+        </g>
+        <path d="M164 156 L470 120 L470 200 Z" style="fill:var(--crit)" opacity=".16"/>
+        <!-- 서 있는 사람 (다리만 선명) -->
+        <g transform="translate(420,0)">
+          <rect x="-18" y="40" width="36" height="70" rx="10" style="fill:var(--muted)" opacity=".35"/>
+          <circle cx="0" cy="26" r="14" style="fill:var(--muted)" opacity=".35"/>
+          <rect x="-14" y="110" width="11" height="90" rx="4" style="fill:var(--ink)"/>
+          <rect x="3" y="110" width="11" height="90" rx="4" style="fill:var(--ink)"/>
+          <text x="22" y="150" style="fill:var(--crit)" font-size="12" font-weight="700">다리 2개 = 사람</text>
+        </g>
+        <!-- 쓰러진 사람 -->
+        <g transform="translate(560,0)">
+          <rect x="0" y="184" width="120" height="16" rx="8" style="fill:var(--ink)"/>
+          <circle cx="130" cy="190" r="10" style="fill:var(--ink)"/>
+          <text x="0" y="174" style="fill:var(--crit)" font-size="12" font-weight="700">쓰러진 사람도 바닥 높이</text>
+        </g>
+        <text x="120" y="222" text-anchor="middle" style="fill:var(--muted)" font-size="11">낮은 카메라 → 얼굴 대신 다리</text>
+      </svg>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>발견 뒤 4대의 역할</h2>
+    <div class="tbl"><table>
+      <thead><tr><th></th><th>사람을 발견한 로봇 (MD1 · MD4)</th><th>발견 못한 로봇 (MD2 · MD3)</th></tr></thead>
+      <tbody>
+        <tr><td>발견 직후</td><td>그 자리에 멈춰 경광등과 소리로 위치 표시, 사진·위치 전송</td><td>"사람 없음" 전송 후 가까운 비상구로 이동</td></tr>
+        <tr><td>소방대 도착 전</td><td>요구조자 옆을 지키며 "구조대가 오고 있습니다" 음성 안내</td><td>비상구 안쪽에서 대기, 내부 상황(발견 위치, 막힌 길) 전송</td></tr>
+        <tr><td>소방대 도착</td><td>계속 위치 표시 (연기 속 목표 지점)</td><td>소방대 앞장서서 발견 위치까지 길 안내</td></tr>
+        <tr><td>구조 뒤</td><td>들어온 길을 거꾸로 앞장서서 탈출 경로 안내</td><td>다음 지시 대기 또는 관리실 복귀</td></tr>
+      </tbody>
+    </table></div>
+    <p class="muted" style="font-size:13px">소방대는 처음 들어오는 건물에서 연기 때문에 길을 찾기 어렵습니다. 방금 그 길을 다녀온 로봇이 앞장서면, 수색에 쓸 시간을 구조에 쓸 수 있습니다.</p>
+  </section>
+
+  <div class="grid2">
+    <section class="panel">
+      <h2>동작 순서</h2>
+      <ol class="flow">
+        <li><b>대기</b> · 4대가 관리실 도크에서 충전하며 대기합니다.</li>
+        <li><b>출동</b> · 화재 수신기 신호(또는 관리자 버튼)를 받으면 각자 맡은 구역으로 출발합니다.</li>
+        <li><b>수색</b> · 정해진 경로로 통로 끝, 랙 사이, 구석까지 훑으며 카메라로 다리를 찾습니다.</li>
+        <li><b>발견</b> · 사람을 찾으면 그 자리에 멈춰 경광등과 음성으로 표시하고, 위치와 사진을 휴대폰으로 보냅니다.</li>
+        <li><b>완료</b> · 아무도 없는 구역은 "수색 완료 · 사람 없음"을 보내 소방대가 건너뛸 수 있게 합니다.</li>
+        <li><b>마중</b> · 발견 못한 로봇은 비상구로 가서 소방대를 기다립니다.</li>
+        <li><b>안내 · 구조</b> · 소방대가 오면 앞장서서 발견 위치까지 데려가고, 구조 뒤에는 발견한 로봇이 탈출 경로를 앞장섭니다.</li>
+      </ol>
+    </section>
+    <section class="panel">
+      <h2>시연은 이렇게</h2>
+      <ul class="plain">
+        <li>박스로 관리실(도크)과 구역 2~4개를 만들고, 메카독 4대를 도크에 둡니다.</li>
+        <li>팀원 1~2명이 박스 뒤에 서 있거나 앉아 다리만 보이게 숨습니다.</li>
+        <li>노트북에서 "화재 경보"를 누르면 4대가 각 구역으로 출발합니다.</li>
+        <li>메카독이 다리를 찾으면 멈춰 소리를 내고, <b>청중 앞에서 실제 휴대폰에 알림이 울립니다.</b></li>
+        <li>사람이 없는 구역 로봇은 "사람 없음" 알림을 보내고 비상구로 갑니다.</li>
+        <li>팀원 2명이 소방대 역할로 비상구에 들어오면, 기다리던 메카독이 앞장서 숨은 팀원에게 데려갑니다.</li>
+      </ul>
+      <p class="muted" style="font-size:12px">확인 필요: 비전 모듈이 기본으로 하는 건 색 인식이라, 다리 인식이 어려우면 시연에서는 다리에 색 밴드를 감거나, 사진을 휴대폰으로 보내 사람이 판단하는 방식으로 대체합니다.</p>
+    </section>
+  </div>
+
+  <section class="panel">
+    <h2>1안과 비교</h2>
+    <div class="tbl"><table>
+      <thead><tr><th></th><th>1안 · 대피로 순찰</th><th>2안 · 요구조자 수색</th></tr></thead>
+      <tbody>
+        <tr><td>평소</td><td>대피로를 걸으며 막힘 점검</td><td>관리실에서 충전 대기</td></tr>
+        <tr><td>화재 시</td><td>열린 길로 사람을 비상구까지 인솔</td><td>남은 사람을 찾아 위치를 휴대폰으로 알림</td></tr>
+        <tr><td>돕는 대상</td><td>대피하는 사람</td><td>대피 못한 사람, 관리자, 소방대</td></tr>
+        <tr><td>핵심 기능</td><td>라인 따라가기, 초음파</td><td>카메라로 사람(다리) 인식, 휴대폰 알림</td></tr>
+        <tr><td>배터리</td><td>교대 운용 필요</td><td>항상 완충 상태로 출동</td></tr>
+        <tr><td>시연 난이도</td><td>키트만으로 가능</td><td>사람 인식과 휴대폰 알림 구현이 관건</td></tr>
+        <tr><td>보여주는 장면</td><td>막힌 길 발견, 인솔</td><td>숨은 사람 발견, 휴대폰 알림이 울림</td></tr>
+      </tbody>
+    </table></div>
+    <p class="muted" style="font-size:13px">두 안은 합칠 수도 있습니다. 2대는 대피를 인솔하고, 2대는 남은 사람을 찾는 식입니다.</p>
+  </section>
+</div>
+
+</div></template>
+<template id="tpl-dropped"><style>
+/* Layout: 의사결정 기록 — 탈락 이유 4종 요약(필터) → 대화 순서대로 탈락 카드(고민 · 뺀 이유 · 그래서) → 남은 통과 조건 → 살아남은 1안·2안 */
+:host{
+  --bg:#eceeec; --surface:#f8f9f8; --ink:#1c2220; --muted:#5b6662; --line:#c9d0cc;
+  --a:#2f6db0; --b:#c4562a; --c:#8456c0; --d:#7a6a1e; --keep:#2e8a55; --keep-bg:#dcefe3;
+  --x:#cc3229;
+  --font-sans:"IBM Plex Sans KR",system-ui,-apple-system,"Malgun Gothic",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:host(:not(.force-light)){
+  --bg:#131715; --surface:#1b201e; --ink:#e3e8e5; --muted:#97a39e; --line:#323b37;
+  --a:#5c9be0; --b:#ec8152; --c:#ad86e6; --d:#d6bf55; --keep:#55c084; --keep-bg:#1b3326; --x:#f0645c; color-scheme:dark;
+}}
+:host(.force-dark){
+  --bg:#131715; --surface:#1b201e; --ink:#e3e8e5; --muted:#97a39e; --line:#323b37;
+  --a:#5c9be0; --b:#ec8152; --c:#ad86e6; --d:#d6bf55; --keep:#55c084; --keep-bg:#1b3326; --x:#f0645c; color-scheme:dark;
+}
+*{box-sizing:border-box}
+.page{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-size:14px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 56px}
+.wrap{max-width:980px;margin:0 auto;display:grid;gap:28px}
+h1,h2,h3{text-wrap:balance;margin:0;line-height:1.25}
+h1{font-size:28px;font-weight:700;letter-spacing:-.01em}
+h2{font-size:18px;font-weight:600}
+h3{font-size:16px;font-weight:600}
+p{margin:0}
+.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}
+.lead{font-size:16px;max-width:66ch;margin-top:8px;color:var(--muted)}
+.lead b{color:var(--ink)}
+
+.cats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:760px){.cats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cat{font:inherit;color:var(--ink);text-align:left;background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--cc);border-radius:8px;padding:12px 14px;display:grid;gap:4px;cursor:pointer;min-width:0}
+.cat:hover{border-color:var(--muted);border-top-color:var(--cc)}
+.cat:focus-visible{outline:2px solid var(--cc);outline-offset:2px}
+.cat.on{background:var(--bg);box-shadow:inset 0 0 0 2px var(--cc)}
+.cat b{font-size:14px}
+.cat .n{font-family:var(--font-mono);font-size:26px;font-weight:600;color:var(--cc);font-variant-numeric:tabular-nums;line-height:1.1}
+.cat small{font-size:12px;color:var(--muted)}
+.filter-note{font-size:12.5px;color:var(--muted);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.filter-note button{font:inherit;font-size:12px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:3px 10px;cursor:pointer}
+
+.list{display:grid;gap:12px}
+.item{display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px 16px}
+.num{font-family:var(--font-mono);font-weight:600;font-size:13px;color:var(--muted);display:grid;justify-items:center;align-content:start;gap:6px}
+.num i{display:block;width:4px;flex:1;min-height:24px;border-radius:2px;background:var(--cc)}
+.body{display:grid;gap:10px;min-width:0}
+.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 12px}
+.chip{font-family:var(--font-mono);font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;color:var(--cc);border:1px solid var(--cc);white-space:nowrap}
+.kind{font-size:11.5px;color:var(--muted)}
+.rows{display:grid;grid-template-columns:72px minmax(0,1fr);gap:6px 12px;font-size:13.5px}
+.rows dt{font-size:12px;color:var(--muted);padding-top:1px}
+.rows dd{margin:0}
+.rows dd.why{color:var(--ink)}
+.next{border-left:3px solid var(--keep);background:var(--keep-bg);border-radius:0 6px 6px 0;padding:8px 12px;font-size:13.5px}
+.next span{font-size:11.5px;color:var(--keep);font-weight:600;display:block}
+.who{font-size:11.5px;color:var(--muted)}
+@media (max-width:520px){.item{grid-template-columns:minmax(0,1fr)}.num{grid-template-columns:auto 1fr;justify-items:start;align-items:center}.num i{width:100%;height:4px;min-height:0}.rows{grid-template-columns:minmax(0,1fr)}}
+
+.rules{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:760px){.rules{grid-template-columns:minmax(0,1fr)}}
+.rule{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:grid;gap:4px}
+.rule b{font-size:14px}
+.rule span{font-size:12.5px;color:var(--muted)}
+.rule .from{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+
+.survive{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:760px){.survive{grid-template-columns:minmax(0,1fr)}}
+.plan{background:var(--surface);border:1px solid var(--keep);border-radius:8px;padding:16px;display:grid;gap:10px;align-content:start}
+.plan h3{font-size:18px}
+.plan .tag{font-family:var(--font-mono);font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;background:var(--keep);color:var(--surface);justify-self:start}
+.plan ul{margin:0;padding-left:0;list-style:none;display:grid;gap:6px;font-size:13px}
+.plan li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px}
+.plan li .chip{align-self:start}
+.plan a{color:var(--keep);font-weight:600;font-size:13px;word-break:break-all}
+
+[hidden]{display:none!important}
+.page{padding-left:0;padding-right:0;padding-block:8px 24px}
+</style><div class="page">
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">메카독 화재 프로젝트 · 아이디어 회의 기록</div>
+    <h1>메카독 아이디어 탈락</h1>
+  </header>
+
+  <section aria-label="탈락 이유 요약" style="display:grid;gap:10px">
+    <h2>무엇 때문에 빠졌나</h2>
+    <div class="cats" id="cats"></div>
+    <div class="filter-note"><span id="filterTxt">카드를 누르면 그 이유로 빠진 안만 봅니다.</span><button type="button" id="clear" hidden>전체 보기</button></div>
+  </section>
+
+  <section aria-label="탈락한 아이디어" style="display:grid;gap:10px">
+    <h2>대화 순서대로</h2>
+    <div class="list" id="list"></div>
+  </section>
+
+  <section aria-label="남은 통과 조건" style="display:grid;gap:10px">
+    <h2>탈락에서 얻은 통과 조건</h2>
+    <p class="muted" style="font-size:13px">새 아이디어가 나오면 이 조건부터 대 봅니다.</p>
+    <div class="rules">
+      <div class="rule"><b>고정 설비로 되면 안 한다</b><span>감지기·카메라·유도등으로 충분한 일은 로봇이 할 이유가 없다. 위치가 매번 바뀌거나 판단이 필요한 일을 맡는다.</span><span class="from">← 주차장 충전면 순찰, 로봇 화재 감지</span></div>
+      <div class="rule"><b>메카독 키 높이 안에서 끝난다</b><span>고개를 못 젖히니 위를 봐야 하는 일은 뺀다. 바닥·통로·다리 높이에서 끝나는 일만 맡는다.</span><span class="from">← 물류창고, 적재 랙, 센서 기울이기, 차 밑 진입</span></div>
+      <div class="rule"><b>문 없이 트인 평평한 공간</b><span>문을 열어야 하거나 바닥이 고르지 않은 곳은 운영이 안 된다. 실제 현장 사진·구조부터 확인한다.</span><span class="from">← 전통시장, EV 전용 충전구역</span></div>
+      <div class="rule"><b>사람이 다치지 않는 동선</b><span>차가 수시로 드나드는 곳은 로봇이 밟히거나 사고를 낸다.</span><span class="from">← 급속충전소, 주차장</span></div>
+      <div class="rule"><b>필요성과 시연 가능성 둘 다</b><span>시연만 쉬우면 설득이 안 되고, 필요성만 크면 보여줄 수 없다.</span><span class="from">← 학교 건물, 산업 현장 대형 로봇 구상</span></div>
+      <div class="rule"><b>직접 해보고 정한다</b><span>로봇 동작·현장 사례는 말로 정하지 말고 직접 해보거나 찾아본 뒤 정한다.</span><span class="from">← 아리셀 적재 확인, 메카독 고개 테스트</span></div>
+    </div>
+  </section>
+
+  <section aria-label="살아남은 안" style="display:grid;gap:10px">
+    <h2>그래서 남은 것</h2>
+    <div class="survive">
+      <div class="plan">
+        <span class="tag">1안</span>
+        <h3>대피로 순찰 · 움직이는 유도등</h3>
+        <p class="muted" style="font-size:13px">평소 대피로망을 나눠 걸으며 막힌 곳을 찾고, 불이 나면 갈림길에서 불 반대쪽 비상구로 화살표를 띄운다.</p>
+        <ul>
+          <li><span class="chip" style="--cc:var(--a)">대체</span><span>고정 유도등은 불 위치를 모르고 방향을 못 바꾼다</span></li>
+          <li><span class="chip" style="--cc:var(--b)">한계</span><span>막힌 물건도, 갈림길 안내도 바닥 높이에서 끝난다</span></li>
+          <li><span class="chip" style="--cc:var(--c)">현장</span><span>작업장 통로를 걷고, 키트만으로 시연된다</span></li>
+        </ul>
+        <a href="#plan1">1안 탭으로 이동</a>
+      </div>
+      <div class="plan">
+        <span class="tag">2안</span>
+        <h3>요구조자 수색</h3>
+        <p class="muted" style="font-size:13px">관리실에서 대기하다 불이 나면 구역을 나눠 남은 사람을 다리로 찾고 휴대폰으로 알린다. 못 찾은 로봇은 소방대를 마중해 안내한다.</p>
+        <ul>
+          <li><span class="chip" style="--cc:var(--a)">대체</span><span>남은 사람 위치는 매번 달라 고정 설비로 못 찾는다</span></li>
+          <li><span class="chip" style="--cc:var(--b)">한계</span><span>연기 아래 바닥이 보이니 낮은 키가 오히려 장점</span></li>
+          <li><span class="chip" style="--cc:var(--c)">현장</span><span>평소엔 충전만 해서 배터리·운영 걱정이 없다</span></li>
+        </ul>
+        <a href="#plan2">2안 탭으로 이동</a>
+      </div>
+    </div>
+  </section>
+</div>
+
+</div></template>
+
+<script>
+(function(){
+const RUN={
+"plan1":function(ROOT){
+
+(function(){
+const NS="http://www.w3.org/2000/svg",$=s=>ROOT.querySelector(s);
+const el=(tag,attrs,parent)=>{const e=document.createElementNS(NS,tag);for(const k in attrs){const v=attrs[k];if(typeof v==="string"&&v.includes("var("))e.style.setProperty(k,v);else e.setAttribute(k,v)}if(parent)parent.appendChild(e);return e};
+const txt=(p,x,y,s,o={})=>{const t=el("text",{x,y,"font-size":o.size||11,fill:o.fill||"var(--muted)","text-anchor":o.anchor||"start","font-weight":o.weight||400,...(o.mono?{"font-family":"var(--font-mono)"}:{})},p);t.textContent=s;return t};
+const css=v=>`var(--${v})`;
+const dist=(a,b)=>Math.hypot(b[0]-a[0],b[1]-a[1]);
+const plen=p=>{let L=0;for(let i=0;i<p.length-1;i++)L+=dist(p[i],p[i+1]);return L};
+function along(p,d){for(let i=0;i<p.length-1;i++){const L=dist(p[i],p[i+1]);if(d<=L){const f=L?d/L:0;return[p[i][0]+(p[i+1][0]-p[i][0])*f,p[i][1]+(p[i+1][1]-p[i][1])*f]}d-=L}return p[p.length-1].slice()}
+const lerp=(a,b,f)=>[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f];
+
+/* ---------- 노드 ---------- */
+const NODES={
+  real:{M1a:[85,160],M1b:[85,370],E1x:[30,370],D1:[112,398],
+        M2a:[850,318],M2z:[660,140],D2:[705,352],
+        M3s:[500,440],M3j:[500,407],M3a:[150,407],M3b:[690,407],OBD:[432,407],D3:[500,394],
+        M4a:[705,420],M4z:[975,520],D4:[742,480]},
+  demo:{M1a:[180,80],M1b:[180,230],E1x:[34,230],D1:[110,250],
+        M2a:[440,80],M2z:[440,212],D2:[440,190],
+        M3s:[310,370],M3j:[310,230],M3a:[200,230],M3b:[420,230],OBD:[276,230],D3:[310,252],
+        M4a:[462,230],M4z:[588,230],D4:[520,250]}
+};
+const VIA={real:{"M2a>M2z":[[705,318],[705,250],[660,250]],"M4a>M4z":[[705,480],[962,480],[962,505]]},demo:{}};
+const pts=(v,a,b)=>{const rev=VIA[v][b+">"+a];return[NODES[v][a],...(VIA[v][a+">"+b]||(rev?rev.slice().reverse():[])),NODES[v][b]]};
+const OB={real:[400,407],demo:[250,230]};
+const SPEED=60;
+
+/* ---------- 타임라인 ---------- */
+const track=s=>({segs:[],cur:s,T:0});
+const TR=[track("M1a"),track("M2a"),track("M3s"),track("M4a")];
+function mv(tr,to,mode,extra={}){const dur=Math.max(0.6,Math.max(plen(pts("demo",tr.cur,to)),plen(pts("real",tr.cur,to))*0.45)/SPEED);tr.segs.push({from:tr.cur,to,t0:tr.T,dur,mode,...extra});tr.T+=dur;tr.cur=to}
+function dw(tr,dur,mode,extra={}){tr.segs.push({from:tr.cur,to:tr.cur,t0:tr.T,dur,mode,...extra});tr.T+=dur}
+function padTo(tr,time,mode,extra={}){if(time>tr.T+1e-6)dw(tr,time-tr.T,mode,extra)}
+const [t1,t2,t3,t4]=TR;
+const lap={0:()=>{mv(t1,"M1b","check");mv(t1,"E1x","check");dw(t1,1.2,"exitcheck",{seg:0});mv(t1,"M1b","check");mv(t1,"M1a","check")},
+           1:()=>{mv(t2,"M2z","check");dw(t2,1.2,"exitcheck",{seg:1});mv(t2,"M2a","check")},
+           3:()=>{mv(t4,"M4z","check");dw(t4,1.2,"exitcheck",{seg:3});mv(t4,"M4a","check")}};
+const CH=[0];
+TR.forEach((tr,k)=>dw(tr,1.2,"start",k===0?{ev:["g","4대 대피로망 점검 시작 · 구간 4개"],voice:["0001.mp3","대피로 점검을 시작합니다."]}:{}));
+lap[0]();lap[1]();lap[3]();
+mv(t3,"M3j","check");mv(t3,"M3a","check");mv(t3,"M3b","check");dw(t3,1.2,"exitcheck",{seg:2});mv(t3,"M3j","check");mv(t3,"M3s","check");
+TR.forEach((tr,k)=>dw(tr,0.01,"done",{ev:["g",`MD${k+1} · ${["왼쪽 통로·비상구 1","랙 동쪽·조립 지선","중앙 간선","동쪽 간선·비상구 2"][k]} 통과 확인`]}));
+CH.push(Math.max(...TR.map(tr=>tr.T))+0.5);TR.forEach(tr=>padTo(tr,CH[1],"done"));
+// ② 막힘
+const OB_ON=CH[1]+0.8;
+dw(t3,1.5,"wait",{ev:["w","[연출] 중앙 간선에 박스(적치물)가 놓임"]});
+mv(t3,"M3j","check");mv(t3,"OBD","check");
+const DETECT=t3.T;
+dw(t3,1,"detect",{ev:["w","MD3 · 앞 28cm 장애물 감지, 정지"]});
+const BLK0=t3.T;
+dw(t3,6,"blocked",{ev:["c","중앙 간선 막힘 · 관리자 호출"],voice:["0002.mp3","대피로가 막혀 있습니다. 물건을 치워 주세요."]});
+const OB_OFF=BLK0+5;
+mv(t3,"M3a","check",{ev:["g","장애물 제거 확인 · 점검 재개"]});mv(t3,"M3b","check");dw(t3,1,"exitcheck",{seg:2,ev:["g","중앙 간선 통과 확인 · 막힘 해소"]});mv(t3,"M3j","check");mv(t3,"M3s","check");
+lap[0]();lap[1]();lap[3]();
+CH.push(Math.max(...TR.map(tr=>tr.T))+0.5);TR.forEach(tr=>padTo(tr,CH[2],"done"));
+// ③ 화재
+TR.forEach((tr,k)=>dw(tr,2,"firesig",k===0?{ev:["s","FIRE_SIG"]}:{}));
+const EVAC0=CH[2]+2;
+TR.forEach((tr,k)=>{mv(tr,"D"+(k+1),"tojunc");dw(tr,0.01,"junc",{ev:["","JUNC"+k],voice:k===0?["0003.mp3","VOICE"]:null})});
+const PEOPLE_T=16;
+const TOTAL=Math.max(...TR.map(tr=>tr.T),EVAC0+PEOPLE_T)+3;
+TR.forEach(tr=>padTo(tr,TOTAL,"junc"));
+const MGR={real:{from:[215,430],to:[400,424]},demo:{from:[150,330],to:[250,256]}};
+const M0=BLK0+0.8,M1=BLK0+3.4,M2=OB_OFF,M3=OB_OFF+2.6;
+function segAt(tr,t){const S=tr.segs;for(let i=0;i<S.length;i++){const s=S[i];if(t<s.t0+s.dur||i===S.length-1)return{s,i}}}
+function posAt(tr,v,t){t=Math.max(0,Math.min(TOTAL,t));const {s}=segAt(tr,t),f=s.dur?Math.max(0,Math.min(1,(t-s.t0)/s.dur)):1;const P=pts(v,s.from,s.to);return along(P,plen(P)*f)}
+
+/* ---------- 화재 시나리오 ---------- */
+let FIRE="W";
+const SCN={
+  W:{name:"서쪽 (반제품 랙)",safe:2,dir:["→","↓","→","→"],fire:{real:[190,300],demo:[95,150]},voice:"화재가 발생했습니다. 오른쪽 비상구 2로 대피하세요.",wrongSign:0},
+  E:{name:"동쪽 (에이징실)",safe:1,dir:["←","↓","←","X"],fire:{real:[830,400],demo:[540,150]},voice:"화재가 발생했습니다. 왼쪽 비상구 1로 대피하세요.",wrongSign:1}
+};
+// 작업자 경로 (출발 구역별)
+const PP={
+  real:{
+    W:[ [[300,250],[660,250],[705,250],[705,407],[705,480],[962,480],[962,505],[988,530]],
+        [[250,140],[660,140],[660,250],[705,250],[705,407],[705,480],[962,480],[962,505],[988,530]],
+        [[880,300],[705,318],[705,407],[705,480],[962,480],[962,505],[988,530]],
+        [[800,300],[705,318],[705,407],[705,480],[962,480],[962,505],[988,530]],
+        [[480,450],[500,407],[705,407],[705,480],[962,480],[962,505],[988,530]],
+        [[560,450],[560,407],[705,407],[705,480],[962,480],[962,505],[988,530]],
+        [[215,450],[215,407],[705,407],[705,480],[962,480],[962,505],[988,530]] ],
+    E:[ [[300,250],[85,250],[85,370],[14,370]],
+        [[250,140],[85,140],[85,370],[14,370]],
+        [[880,300],[705,318],[705,407],[85,407],[85,370],[14,370]],
+        [[800,300],[705,318],[705,407],[85,407],[85,370],[14,370]],
+        [[480,450],[500,407],[85,407],[85,370],[14,370]],
+        [[560,450],[560,407],[85,407],[85,370],[14,370]],
+        [[215,450],[215,407],[85,407],[85,370],[14,370]] ]
+  },
+  demo:{
+    W:[ [[180,60],[180,230],[604,230]], [[440,60],[440,230],[604,230]], [[310,390],[310,230],[604,230]] ],
+    E:[ [[180,60],[180,230],[16,230]], [[440,60],[440,230],[16,230]], [[310,390],[310,230],[16,230]] ]
+  }
+};
+const PSPEED={real:70,demo:34};
+
+/* ---------- 실제 사업장 그리기 ---------- */
+const R=$("#real");
+el("rect",{x:8,y:8,width:984,height:584,fill:css("floor"),stroke:css("wall"),"stroke-width":4},R);
+el("rect",{x:10,y:10,width:110,height:580,fill:css("route-bg"),opacity:.6},R);
+[56,166,276].forEach((y,ri)=>{el("rect",{x:140,y,width:480,height:46,fill:css("floor2"),stroke:css("rack"),"stroke-width":3},R);
+  for(let i=1;i<4;i++)el("line",{x1:140+120*i,y1:y,x2:140+120*i,y2:y+46,stroke:css("rack"),"stroke-width":3},R);
+  for(let i=0;i<12;i++)el("rect",{x:152+i*40,y:y+8,width:28,height:30,rx:2,fill:css("box"),stroke:css("box2")},R);
+  txt(R,630,y+27,["R1 완제품 랙","R2 완제품 랙","R3 반제품 랙"][ri],{size:10})});
+el("rect",{x:140,y:420,width:150,height:168,fill:css("surface"),stroke:css("wall"),"stroke-width":2},R);txt(R,215,505,"사무실 · 방재실",{anchor:"middle",size:12,fill:"var(--ink)"});
+el("rect",{x:150,y:540,width:56,height:22,rx:3,fill:css("signal"),opacity:.85},R);txt(R,178,555,"수신기",{anchor:"middle",size:10.5,weight:700,fill:"#fff"});
+el("rect",{x:310,y:420,width:380,height:168,fill:css("floor2"),stroke:css("line")},R);txt(R,500,570,"포장 · 출하",{anchor:"middle",size:12,fill:"var(--ink)"});
+for(let i=0;i<6;i++)el("rect",{x:340+i*55,y:490,width:40,height:40,rx:2,fill:css("box"),stroke:css("box2")},R);
+el("rect",{x:720,y:20,width:262,height:290,fill:css("floor2"),stroke:css("line")},R);txt(R,851,40,"조립 · 검사 라인",{anchor:"middle",size:12,weight:600,fill:"var(--ink)"});
+[90,190].forEach(y=>{el("rect",{x:745,y,width:200,height:24,rx:4,fill:css("machine"),stroke:css("wall")},R);[770,830,890].forEach(x=>el("rect",{x:x-14,y:y+34,width:28,height:18,rx:2,fill:css("surface"),stroke:css("wall")},R))});
+el("rect",{x:730,y:330,width:210,height:130,fill:css("warn-bg"),stroke:css("warn"),"stroke-width":2},R);txt(R,835,395,"활성화 · 에이징실",{anchor:"middle",size:12,weight:600,fill:"var(--warn)"});
+el("rect",{x:720,y:500,width:225,height:88,fill:css("floor2"),stroke:css("line")},R);txt(R,832,560,"자재 입고",{anchor:"middle",size:12,fill:"var(--ink)"});
+[[4,345,"비상구 1",22,341,"start"],[984,505,"비상구 2",978,500,"end"]].forEach(([x,y,n,tx,ty,an])=>{el("rect",{x,y,width:12,height:50,fill:css("route")},R);txt(R,tx,ty,n,{size:11,weight:700,fill:"var(--route)",anchor:an})});
+// 대피로망
+const NET_R=["M85 140 V370 H16","M85 140 H660 V250 H85","M660 250 H705 V407","M850 318 H705","M85 407 H705 V480 H962 V505 L990 530","M215 420 V407","M500 440 V407","M560 440 V407"];
+NET_R.forEach(d=>el("path",{d,fill:"none",stroke:css("route"),"stroke-width":6,opacity:.55,"stroke-linejoin":"round"},R));
+txt(R,400,398,"간선",{size:10.5,weight:700,fill:"var(--route)"});
+// 고정 유도등
+function sign(svg,x,y,arrow){const g=el("g",{},svg);const r=el("rect",{x:x-15,y:y-10,width:30,height:20,rx:3,fill:css("ok"),stroke:"none","stroke-width":3},g);txt(g,x,y+5,arrow,{anchor:"middle",size:14,weight:700,fill:"#fff"});const lb=txt(g,x,y-15,"유도등: 불 쪽 안내",{anchor:"middle",size:10,weight:700,fill:"var(--crit)"});return{r,lb}}
+const signsR=[sign(R,300,430,"←"),sign(R,728,365,"↓")];
+const obR=el("g",{},R);el("rect",{x:386,y:396,width:30,height:22,rx:2,fill:css("box"),stroke:css("box-ink"),"stroke-width":1.5},obR);txt(obR,401,390,"적치물",{anchor:"middle",size:10,weight:700,fill:"var(--crit)"});
+const fireR=el("g",{},R);const fireRc=el("circle",{r:80,fill:css("crit"),opacity:.22,class:"glow"},fireR);const fireRt=txt(fireR,0,-86,"",{anchor:"middle",size:12,weight:700,fill:"var(--crit)"});
+const badgeG=el("g",{},R);const badgeR=el("rect",{x:20,y:16,width:150,height:24,rx:5,fill:css("ink")},badgeG);const badgeT=txt(badgeG,95,32,"",{anchor:"middle",size:11.5,weight:600,fill:"var(--bg)"});
+
+/* ---------- 시연 모형 그리기 ---------- */
+const D=$("#demo");
+el("rect",{x:10,y:10,width:600,height:400,fill:css("floor"),stroke:css("wall"),"stroke-width":3},D);
+el("rect",{x:6,y:202,width:14,height:56,fill:css("route")},D);txt(D,26,196,"비상구 1",{size:11,weight:700,fill:"var(--route)"});
+el("rect",{x:600,y:202,width:14,height:56,fill:css("route")},D);txt(D,594,196,"비상구 2",{size:11,weight:700,fill:"var(--route)",anchor:"end"});
+[[130,30,"작업 구역 A"],[390,30,"작업 구역 B"],[260,370,"작업 구역 C"]].forEach(([x,y,n])=>{el("rect",{x,y,width:100,height:36,rx:4,fill:"none",stroke:css("muted"),"stroke-dasharray":"4 3"},D);txt(D,x+50,y+(y>300?32:-4),n,{anchor:"middle",size:10.5})});
+["M20 230 H600","M180 66 V230","M440 66 V230","M310 370 V230"].forEach(d=>el("path",{d,fill:"none",stroke:css("route"),"stroke-width":10,opacity:.85},D));
+[[95,120],[95,150],[540,120],[540,150]].forEach(([x,y])=>el("rect",{x:x-22,y:y-12,width:44,height:24,rx:2,fill:css("box"),stroke:css("box2")},D));
+const signsD=[sign(D,180,262,"←"),sign(D,440,262,"→")];
+const rcvD=el("g",{},D);el("rect",{x:528,y:368,width:64,height:26,rx:3,fill:css("signal"),opacity:.85},rcvD);txt(rcvD,560,385,"노트북",{anchor:"middle",size:10.5,weight:700,fill:"#fff"});
+const obD=el("g",{},D);el("rect",{x:238,y:220,width:26,height:20,rx:2,fill:css("box"),stroke:css("box-ink"),"stroke-width":1.5},obD);txt(obD,251,214,"장애물",{anchor:"middle",size:10,weight:700,fill:"var(--crit)"});
+const fireD=el("g",{},D);el("circle",{r:52,fill:css("crit"),opacity:.2,class:"glow"},fireD);const fireDt=txt(fireD,0,-58,"화재 (가정)",{anchor:"middle",size:11.5,weight:700,fill:"var(--crit)"});
+el("line",{x1:470,y1:30,x2:570,y2:30,stroke:css("muted"),"stroke-width":1.5},D);txt(D,520,24,"50cm",{anchor:"middle",size:10.5,mono:true});
+
+/* ---------- 아이콘 ---------- */
+function makeBot(svg,n){const g=el("g",{},svg);const ring=el("circle",{r:15,fill:"none","stroke-width":4},g);
+  el("rect",{x:-11,y:-9,width:22,height:18,rx:5,fill:css("robot"),stroke:css("ink"),"stroke-width":1.5},g);
+  txt(g,0,4,String(n),{anchor:"middle",size:11,weight:700,fill:"#1c2220",mono:true});
+  const bub=el("g",{transform:"translate(0,-30)"},g);el("rect",{x:-14,y:-12,width:28,height:22,rx:5,fill:"#262b29"},bub);const ar=txt(bub,0,5,"",{anchor:"middle",size:15,weight:700,fill:"var(--led-on)"});
+  return{g,ring,bub,ar}}
+function makePerson(svg,label,r=7){const g=el("g",{},svg);el("circle",{r,fill:css(label?"warn-bg":"person"),stroke:css(label?"ink":"surface"),"stroke-width":1.5},g);if(label)txt(g,0,3.5,label,{anchor:"middle",size:8.5,weight:700,fill:"var(--ink)"});return g}
+const ppl={real:PP.real.W.map(()=>makePerson(R)),demo:PP.demo.W.map(()=>makePerson(D,null,9))};
+const mgr={real:makePerson(R,"관리",8),demo:makePerson(D,"관리",8)};
+const bots={real:TR.map((_,k)=>makeBot(R,k+1)),demo:TR.map((_,k)=>makeBot(D,k+1))};
+const sigs={real:TR.map(()=>el("line",{stroke:css("signal"),"stroke-width":2,"stroke-dasharray":"6 4",class:"sig"},R)),demo:TR.map(()=>el("line",{stroke:css("signal"),"stroke-width":2,"stroke-dasharray":"6 4",class:"sig"},D))};
+
+/* ---------- 매트릭스 ---------- */
+const L=["................","....#...........","...##...........","..##############","..##############","...##...........","....#...........","................"];
+const PAT={
+  smile:["................","..##........##..",".#..#......#..#.","................","................","....########....",".....######.....","................"],
+  look:["................","..####....####..","..#..#....#..#..","..####....####..","................","................","....########....","................"],
+  pause:["................","....##....##....","....##....##....","....##....##....","....##....##....","....##....##....","................","................"],
+  X:["..##........##..","...##......##...","....##....##....","......####......","......####......","....##....##....","...##......##...","..##........##.."],
+  bang:[".......##.......",".......##.......",".......##.......",".......##.......",".......##.......","................",".......##.......","................"],
+  "←":L,"→":L.map(r=>r.split("").reverse().join("")),
+  "↓":["......####......","......####......","......####......","......####......","..############..","....########....","......####......",".......##......."]
+};
+const MODES={start:{t:"점검 시작",c:"ok",p:"smile"},check:{t:"대피로 점검 중",c:"ok",p:"look"},exitcheck:{t:"구간 끝 확인",c:"ok",p:"look"},done:{t:"점검 완료 · 대기",c:"ok",p:"smile"},wait:{t:"대기",c:"ok",p:"smile"},
+  detect:{t:"장애물 감지 · 정지",c:"warn",p:"pause"},blocked:{t:"대피로 막힘 경보",c:"crit",p:"X",b:1},firesig:{t:"화재 신호 수신",c:"crit",p:"bang",b:1},tojunc:{t:"갈림길로 이동",c:"crit",p:"bang"},junc:{t:"갈림길 안내",c:"crit",p:"DIR",b:1}};
+const fleet=$("#fleet");
+const fRows=TR.map((_,k)=>{const d=document.createElement("div");d.className="fbot";d.innerHTML=`<span class="n">MD${k+1}</span><b></b><svg viewBox="0 0 160 80"></svg><small></small>`;fleet.appendChild(d);
+  const sv=d.querySelector("svg"),dots=[];for(let r=0;r<8;r++)for(let c=0;c<16;c++){const e=el("circle",{cx:5+c*10,cy:5+r*10,r:3.8},sv);e.style.fill="#3a413e";dots.push(e)}return{d,dots,last:""}});
+function paint(row,name){if(row.last===name)return;row.last=name;const P=PAT[name];for(let r=0;r<8;r++)for(let c=0;c<16;c++)row.dots[r*16+c].style.fill=P[r][c]==="#"?"var(--led-on)":"#3a413e"}
+const SEGN=["MD1 · 왼쪽 통로 → 비상구 1","MD2 · 랙 동쪽 · 조립 지선","MD3 · 중앙 간선 · 사무실·포장","MD4 · 동쪽 간선 → 비상구 2"];
+const segBox=$("#segs");const segEls=SEGN.map(n=>{const d=document.createElement("div");d.className="seg ok";d.innerHTML=`<span>${n}</span><b></b>`;segBox.appendChild(d);return d});
+
+/* ---------- 렌더 ---------- */
+let t=0,playing=false,last=performance.now(),key="";
+const slider=$("#slider");slider.max=TOTAL.toFixed(2);
+const fmt=x=>`${Math.floor(x/60)}:${String(Math.floor(x%60)).padStart(2,"0")}`;
+const CHTXT=[
+  "<b>① 대피로망 점검</b> · 간선과 구역별 지선을 4대가 나눠 걷습니다. 구간 끝까지 가서 지나갈 수 있는지 확인하고 돌아옵니다.",
+  "<b>② 막힘 발견</b> · 중앙 간선에 누군가 박스를 두고 갔습니다. MD3이 초음파로 감지해 멈추고 X와 음성으로 알립니다. 관리자가 치우면 끝까지 통과되는지 다시 확인합니다.",
+  "<b>③ 화재 · 갈림길 안내</b> · 수신기가 발화 구역을 알려주면 4대가 각자 갈림길로 가서, 불 반대쪽 비상구로 화살표를 띄웁니다. 어느 구역에서 출발한 사람이든 갈림길을 지나며 안내를 받습니다."
+];
+function evText(e){if(e==="FIRE_SIG")return`화재 수신기: ${SCN[FIRE].name} 발화 → 4대 갈림길 안내 모드`;if(e.startsWith("JUNC")){const k=+e.slice(4),a=SCN[FIRE].dir[k];return`MD${k+1} · 갈림길 도착 · ${a==="X"?"X 진입 금지":a+" 표시"}`}return e}
+function render(){
+  const states=TR.map(tr=>segAt(tr,t)),ch=t>=CH[2]?2:t>=CH[1]?1:0,S=SCN[FIRE],fire=t>=CH[2];
+  ["real","demo"].forEach(v=>{
+    TR.forEach((tr,k)=>{const s=states[k].s,Mo=MODES[s.mode],b=bots[v][k],p=posAt(tr,v,t);
+      b.g.setAttribute("transform",`translate(${p[0].toFixed(1)},${p[1].toFixed(1)})`);b.ring.style.stroke=`var(--${Mo.c})`;b.ring.classList.toggle("blink",!!Mo.b);
+      const showAr=s.mode==="junc"||s.mode==="blocked";b.bub.style.display=showAr?"":"none";b.ar.textContent=s.mode==="blocked"?"X":S.dir[k];
+      const ln=sigs[v][k],src=v==="real"?[178,540]:[560,368];
+      if(t>=CH[2]&&t<CH[2]+3){ln.setAttribute("x1",src[0]);ln.setAttribute("y1",src[1]);ln.setAttribute("x2",p[0]);ln.setAttribute("y2",p[1]);ln.style.display=""}else ln.style.display="none"});
+    // 사람
+    const paths=PP[v][FIRE];
+    ppl[v].forEach((g,i)=>{const P=paths[i],st=EVAC0+0.5+i*0.35;let q=P[0];
+      if(fire&&t>st){const d=(t-st)*PSPEED[v];q=along(P,d);if(d>plen(P)+20){g.style.display="none";return}}
+      g.style.display="";g.setAttribute("transform",`translate(${q[0].toFixed(1)},${q[1].toFixed(1)})`)});
+    // 관리자
+    const M=MGR[v],g=mgr[v];let q=M.from;
+    if(t>=M0&&t<M1)q=lerp(M.from,M.to,(t-M0)/(M1-M0));else if(t>=M1&&t<M2)q=M.to;else if(t>=M2&&t<M3)q=lerp(M.to,M.from,(t-M2)/(M3-M2));
+    g.style.display=t>=M0&&t<M3?"":"none";g.setAttribute("transform",`translate(${q[0].toFixed(1)},${q[1].toFixed(1)})`);
+  });
+  const obShow=t>=OB_ON&&t<OB_OFF;obR.style.display=obShow?"":"none";obD.style.display=obShow?"":"none";
+  fireR.style.display=fire?"":"none";fireD.style.display=fire?"":"none";
+  fireR.setAttribute("transform",`translate(${S.fire.real.join(",")})`);fireD.setAttribute("transform",`translate(${S.fire.demo.join(",")})`);
+  fireRt.textContent=`화재 · ${S.name}`;
+  [signsR,signsD].forEach(arr=>arr.forEach((sg,i)=>{const wrong=fire&&i===S.wrongSign;sg.r.style.stroke=wrong?"var(--crit)":"none";sg.lb.style.display=wrong?"":"none"}));
+  $("#clock").textContent=fmt(t);
+  if(document.activeElement!==slider)slider.value=t;
+  const k2=states.map(x=>x.s.mode+x.i).join("|")+ch+(obShow?1:0)+FIRE;
+  if(k2!==key){key=k2;
+    $("#chapter").innerHTML=CHTXT[ch];
+    ROOT.querySelectorAll("[data-ch]").forEach(b=>b.classList.toggle("on",+b.dataset.ch===ch));
+    TR.forEach((tr,k)=>{const s=states[k].s,Mo=MODES[s.mode],row=fRows[k];
+      const dir=S.dir[k];row.d.querySelector("b").textContent=s.mode==="junc"?`갈림길 안내 ${dir}`:Mo.t;
+      row.d.querySelector("small").textContent=s.mode==="junc"?(dir==="X"?"화재 쪽 진입 금지":`비상구 ${S.safe} 방향`):(s.mode==="blocked"?"X 막힘":"");
+      paint(row,Mo.p==="DIR"?dir:Mo.p)});
+    // 비상구
+    [1,2].forEach(n=>{const e=$("#ex"+n),bad=fire&&S.safe!==n;e.className="exit "+(bad?"crit":"ok");e.querySelector("b").textContent=bad?"불 쪽 · 안내 안 함":fire?"이쪽으로 안내 중":"사용 가능"});
+    // 구간
+    segEls.forEach((d,k)=>{const s=states[k].s;let c="ok",txt="통과 가능";
+      if(fire){c="sig";txt="대피 안내 중"}else if(k===2&&t>=DETECT&&t<OB_OFF){c="crit";txt="막힘"}else if(["check","exitcheck","start"].includes(s.mode)){c="warn";txt="점검 중"}
+      d.className="seg "+c;d.querySelector("b").textContent=txt});
+    badgeT.textContent=ch===0?"08:30 · 업무 전 점검":ch===1?"13:10 · 근무 중 점검":"14:30 · 근무 중 화재";badgeR.style.fill=ch<2?"var(--ink)":"var(--crit)";
+    const Lg=[];TR.forEach(tr=>tr.segs.forEach(g=>{if(g.ev&&g.t0<=t)Lg.push({t:g.t0,c:g.ev[0],m:evText(g.ev[1])})}));
+    if(fire&&t>=EVAC0+PEOPLE_T-2)Lg.push({t:EVAC0+PEOPLE_T-2,c:"g",m:`전원 비상구 ${S.safe}로 대피 완료 · 남은 사람은 2안 수색으로`});
+    if(fire&&t>=EVAC0+1)Lg.push({t:EVAC0+1,c:"g",m:`MD1 음성: "${S.voice}"`});
+    Lg.sort((a,b)=>b.t-a.t);
+    $("#log").innerHTML=Lg.map(l=>`<li class="${l.c}"><time>${fmt(l.t)}</time><span>${l.m}</span></li>`).join("");
+  }
+  $("#play").textContent=playing?"일시정지":(t>=TOTAL?"다시 재생":"재생");
+}
+let SPD=2;ROOT.querySelectorAll("[data-spd]").forEach(b=>b.addEventListener("click",()=>{SPD=+b.dataset.spd;ROOT.querySelectorAll("[data-spd]").forEach(x=>x.classList.toggle("on",x===b))}));
+function frame(now){const dt=Math.min(0.1,(now-last)/1000);last=now;if(playing){t+=dt*SPD;if(t>=TOTAL){t=TOTAL;playing=false}}render();requestAnimationFrame(frame)}
+$("#play").addEventListener("click",()=>{if(t>=TOTAL)t=0;playing=!playing});
+$("#reset").addEventListener("click",()=>{t=0;playing=true;key=""});
+ROOT.querySelectorAll("[data-ch]").forEach(b=>b.addEventListener("click",()=>{t=CH[+b.dataset.ch]+0.01;playing=true;key=""}));
+ROOT.querySelectorAll("[data-fire]").forEach(b=>b.addEventListener("click",()=>{FIRE=b.dataset.fire;ROOT.querySelectorAll("[data-fire]").forEach(x=>x.classList.toggle("on",x===b));if(t<CH[2]){t=CH[2]+0.01;playing=true}key=""}));
+slider.addEventListener("input",()=>{t=+slider.value;key=""});
+t=EVAC0+7;playing=false; // 첫 화면: 서쪽 화재, 갈림길 안내 중
+requestAnimationFrame(frame);
+})();
+
+},
+"plan2":function(ROOT){
+
+(function(){
+const NS="http://www.w3.org/2000/svg",$=s=>ROOT.querySelector(s);
+const el=(tag,attrs,parent)=>{const e=document.createElementNS(NS,tag);for(const k in attrs){const v=attrs[k];if(typeof v==="string"&&v.includes("var("))e.style.setProperty(k,v);else e.setAttribute(k,v)}if(parent)parent.appendChild(e);return e};
+const txt=(p,x,y,s,o={})=>{const t=el("text",{x,y,"font-size":o.size||11,fill:o.fill||"var(--muted)","text-anchor":o.anchor||"start","font-weight":o.weight||400,...(o.mono?{"font-family":"var(--font-mono)"}:{})},p);t.textContent=s;return t};
+const css=v=>`var(--${v})`;
+const M=$("#map");
+
+/* ---------- 바닥·구역 ---------- */
+el("rect",{x:8,y:8,width:984,height:584,fill:css("floor"),stroke:css("wall"),"stroke-width":4},M);
+const ZONES=[
+  {c:"z1",x:124,y:14,w:590,h:322,n:"구역 1 · 랙"},
+  {c:"z2",x:718,y:14,w:268,h:300,n:"구역 2 · 조립 라인"},
+  {c:"z3",x:300,y:340,w:414,h:248,n:"구역 3 · 포장·통로"},
+  {c:"z4",x:718,y:318,w:268,h:270,n:"구역 4 · 에이징실 앞·입고"}
+];
+const zoneEls=ZONES.map(z=>{const r=el("rect",{x:z.x,y:z.y,width:z.w,height:z.h,rx:6,fill:css(z.c),opacity:.07,stroke:css(z.c),"stroke-width":2,"stroke-dasharray":"6 5"},M);txt(M,z.x+8,z.y+16,z.n,{size:11,weight:700,fill:`var(--${z.c})`});return r});
+[56,166,276].forEach(y=>{el("rect",{x:140,y,width:480,height:46,fill:css("floor2"),stroke:css("rack"),"stroke-width":3},M);
+  for(let i=1;i<4;i++)el("line",{x1:140+120*i,y1:y,x2:140+120*i,y2:y+46,stroke:css("rack"),"stroke-width":3},M);
+  for(let i=0;i<12;i++)el("rect",{x:152+i*40,y:y+8,width:28,height:30,rx:2,fill:css("box"),stroke:css("box2")},M)});
+txt(M,630,83,"적재 랙 3단",{size:10});
+[90,190].forEach(y=>{el("rect",{x:745,y,width:200,height:24,rx:4,fill:css("machine"),stroke:css("wall")},M);[770,830,890].forEach(x=>el("rect",{x:x-14,y:y+34,width:28,height:18,rx:2,fill:css("surface"),stroke:css("wall")},M))});
+el("rect",{x:730,y:340,width:200,height:110,fill:css("warn-bg"),stroke:css("warn"),"stroke-width":2},M);txt(M,830,400,"에이징실 (닫힘)",{anchor:"middle",size:11,weight:600,fill:"var(--warn)"});
+for(let i=0;i<6;i++)el("rect",{x:330+i*58,y:460,width:40,height:40,rx:2,fill:css("box"),stroke:css("box2")},M);
+for(let i=0;i<4;i++)el("rect",{x:740+i*50,y:530,width:36,height:36,rx:2,fill:css("box"),stroke:css("box2")},M);
+el("rect",{x:130,y:420,width:160,height:168,fill:css("surface"),stroke:css("wall"),"stroke-width":2},M);
+txt(M,210,446,"관리실",{anchor:"middle",size:13,weight:700,fill:"var(--ink)"});
+txt(M,210,462,"도크 4칸 · 충전",{anchor:"middle",size:10});
+[160,193,226,259].forEach(x=>el("rect",{x:x-14,y:530,width:28,height:30,rx:3,fill:"none",stroke:css("muted"),"stroke-dasharray":"3 3"},M));
+el("rect",{x:196,y:416,width:28,height:8,fill:css("floor")},M);
+[[4,345,"비상구 1",22,341,"start"],[984,505,"비상구 2",978,500,"end"]].forEach(([x,y,n,tx,ty,an])=>{el("rect",{x,y,width:12,height:50,fill:css("ok")},M);txt(M,tx,ty,n,{size:11,weight:700,fill:"var(--ok)",anchor:an})});
+const fireG=el("g",{},M);el("circle",{cx:440,cy:80,r:80,fill:css("crit"),opacity:.22,class:"glow"},fireG);txt(fireG,440,30,"화재",{anchor:"middle",size:13,weight:700,fill:"var(--crit)"});
+const smoke=el("rect",{x:8,y:8,width:984,height:584,fill:css("smoke"),opacity:0},M);
+
+/* ---------- 경로 계산 ---------- */
+const dist=(a,b)=>Math.hypot(b[0]-a[0],b[1]-a[1]);
+const plen=p=>{let L=0;for(let i=0;i<p.length-1;i++)L+=dist(p[i],p[i+1]);return L};
+function along(p,d){for(let i=0;i<p.length-1;i++){const L=dist(p[i],p[i+1]);if(d<=L){const f=L?d/L:0;return[p[i][0]+(p[i+1][0]-p[i][0])*f,p[i][1]+(p[i+1][1]-p[i][1])*f]}d-=L}return p[p.length-1].slice()}
+const SPEED=95,T_FIRE=3,T_GO=5.5;
+// 로봇별 이동 구간(legs): {t0, pts}
+const legs=[[],[],[],[]];
+const addLeg=(k,t0,pts)=>{const L={t0,pts,end:t0+plen(pts)/SPEED};legs[k].push(L);return L};
+function rpos(k,t){const Ls=legs[k];let cur=Ls[0];if(t<cur.t0)return cur.pts[0].slice();for(const L of Ls)if(t>=L.t0)cur=L;return along(cur.pts,(t-cur.t0)*SPEED)}
+
+const DOCK=[[160,545],[193,545],[226,545],[259,545]],DOOR=[210,410];
+const PEOPLE=[{p:[612,252],lab:"쓰러진 작업자"},{p:[880,560],lab:"고립된 작업자"}];
+const ZN=["구역 1 · 랙 통로 2 동쪽 끝","구역 2 · 조립 라인","구역 3 · 포장·통로","구역 4 · 자재 입고 구석"];
+const S=[
+  addLeg(0,T_GO,[DOCK[0],[160,500],DOOR,[110,410],[110,140],[660,140],[660,250],[640,250]]),
+  addLeg(1,T_GO,[DOCK[1],[193,500],DOOR,[705,410],[705,150],[960,150],[960,270],[730,270],[730,170]]),
+  addLeg(2,T_GO,[DOCK[2],[226,500],DOOR,[300,369],[690,369],[690,430],[320,430],[320,520],[690,520]]),
+  addLeg(3,T_GO,[DOCK[3],[259,500],DOOR,[705,410],[705,480],[960,480],[960,560],[908,560]])
+];
+const SEARCH_END=Math.max(...S.map(l=>l.end));
+// 발견 못한 로봇 → 비상구로 마중
+const W2=addLeg(1,S[1].end+1,[[730,170],[705,170],[705,480],[958,480],[958,522]]);
+const W3=addLeg(2,S[2].end+1,[[690,520],[690,410],[110,410],[110,370],[40,370]]);
+const T_FF=Math.max(W2.end,W3.end,SEARCH_END)+3;
+// 소방대 안내
+const G3=addLeg(2,T_FF+1.5,[[40,370],[110,370],[110,250],[582,250]]);
+const G2=addLeg(1,T_FF+1.5,[[958,522],[958,560],[938,560]]);
+const RESCUE=3;
+// 구조 뒤 탈출 (발견한 로봇이 앞장)
+const O1=addLeg(0,G3.end+1.6+RESCUE,[[640,250],[660,250],[660,140]].slice(0,1).concat([[600,250],[110,250],[110,370],[30,370]]));
+const O4=addLeg(3,G2.end+1.6+RESCUE,[[908,560],[958,560],[958,522],[990,530]]);
+const TOTAL=Math.max(O1.end,O4.end)+5;
+
+/* ---------- 경로 표시 ---------- */
+S.forEach((l,k)=>el("polyline",{points:l.pts.map(p=>p.join(",")).join(" "),fill:"none",stroke:css(["z1","z2","z3","z4"][k]),"stroke-width":3,"stroke-dasharray":"8 6",opacity:.5},M));
+const guideLines=[G3,G2].map(g=>el("polyline",{points:g.pts.map(p=>p.join(",")).join(" "),fill:"none",stroke:css("fire"),"stroke-width":4,"stroke-dasharray":"4 5",opacity:0},M));
+
+/* ---------- 사람·소방대·로봇 ---------- */
+const pplEls=PEOPLE.map(h=>{const g=el("g",{},M);
+  el("circle",{r:16,fill:css("crit"),opacity:.15},g);
+  el("rect",{x:-7,y:-12,width:5,height:22,rx:2,fill:css("ink")},g);el("rect",{x:2,y:-12,width:5,height:22,rx:2,fill:css("ink")},g);
+  const lb=txt(g,0,-20,h.lab,{anchor:"middle",size:10,weight:700,fill:"var(--crit)"});lb.style.display="none";return{g,lb}});
+function mkFF(){const g=el("g",{},M);el("circle",{r:9,fill:css("fire"),stroke:css("ink"),"stroke-width":1.5},g);txt(g,0,3.5,"119",{anchor:"middle",size:7.5,weight:700,fill:"#fff"});return g}
+const FF=[{g:mkFF(),team:0,lag:0.9,entry:[22,392]},{g:mkFF(),team:0,lag:1.5,entry:[22,350]},{g:mkFF(),team:1,lag:0.9,entry:[978,552]},{g:mkFF(),team:1,lag:1.5,entry:[978,512]}];
+const TEAM=[{guide:2,G:G3,out:0,O:O1,person:0},{guide:1,G:G2,out:3,O:O4,person:1}];
+const cones=[0,1,2,3].map(()=>el("path",{fill:css("crit"),opacity:.18},M));
+const bots=[0,1,2,3].map(k=>{const g=el("g",{},M);const ring=el("circle",{r:15,fill:"none","stroke-width":4},g);
+  el("rect",{x:-11,y:-9,width:22,height:18,rx:5,fill:css("robot"),stroke:css("ink"),"stroke-width":1.5},g);
+  txt(g,0,4,String(k+1),{anchor:"middle",size:11,weight:700,fill:"#1c2220",mono:true});
+  const tag=txt(g,0,-20,"",{anchor:"middle",size:9.5,weight:700,fill:"var(--ink)"});return{g,ring,tag}});
+
+/* ---------- 알림 ---------- */
+const EV=[
+  {t:T_FIRE,kind:"sig",title:"화재 경보 수신",body:"메카독 4대 출동 · 구역 1~4 수색 시작"},
+  {t:S[0].end+.3,kind:"found",title:"MD1 · 사람 발견",body:`${ZN[0]} · 다리 감지 · 움직임 없음`,cap:true},
+  {t:S[3].end+.3,kind:"found",title:"MD4 · 사람 발견",body:`${ZN[3]} · 다리 감지`,cap:true},
+  {t:S[1].end+.3,kind:"clear",title:"MD2 · 수색 완료",body:`${ZN[1]} · 사람 없음 → 비상구 2로 마중`},
+  {t:S[2].end+.3,kind:"clear",title:"MD3 · 수색 완료",body:`${ZN[2]} · 사람 없음 → 비상구 1로 마중`},
+  {t:Math.max(W2.end,W3.end)+.3,kind:"clear",title:"비상구 대기 중",body:"MD3 비상구 1 · MD2 비상구 2 · 소방대 안내 준비 완료"},
+  {t:T_FF,kind:"ff",title:"소방대 도착",body:"비상구 1·2로 진입 · 발견 위치 2곳 전달"},
+  {t:G3.t0,kind:"ff",title:"MD3 · 소방대 안내 시작",body:"비상구 1 → 랙 통로 2 (MD1 위치)"},
+  {t:G2.t0,kind:"ff",title:"MD2 · 소방대 안내 시작",body:"비상구 2 → 자재 입고 구석 (MD4 위치)"},
+  {t:G2.end+1.6,kind:"ff",title:"소방대 요구조자 접촉",body:"자재 입고 구석 1명"},
+  {t:G3.end+1.6,kind:"ff",title:"소방대 요구조자 접촉",body:"랙 통로 2 1명"},
+  {t:O4.end,kind:"clear",title:"구조 완료 · 1명",body:"MD4가 앞장서 비상구 2로 이송"},
+  {t:O1.end,kind:"clear",title:"구조 완료 · 1명",body:"MD1이 앞장서 비상구 1로 이송 · 남은 사람 0명"}
+].sort((a,b)=>a.t-b.t);
+const STEPS=[
+  "<b>① 관리실 대기</b> · 평소에는 순찰하지 않습니다. 4대가 관리실 도크에서 충전하며 기다립니다.",
+  "<b>② 화재 · 출동</b> · 화재 수신기 신호를 받으면 4대가 관리실을 나와 각자 맡은 구역으로 흩어집니다. 연기가 위에서부터 찹니다.",
+  "<b>③ 수색 · 발견</b> · 바닥 높이 카메라로 다리를 찾습니다. MD1·MD4가 1명씩 발견해 그 자리에서 위치를 표시하고, 사진·위치를 휴대폰으로 보냅니다.",
+  "<b>④ 소방대 마중</b> · 아무도 못 찾은 MD2·MD3은 '사람 없음'을 보내고 비상구로 가서 소방대를 기다립니다.",
+  "<b>⑤ 안내 · 구조</b> · 소방대가 들어오면 MD2·MD3이 앞장서 발견 위치까지 데려갑니다. 구조 뒤에는 발견한 MD1·MD4가 탈출 경로를 앞장섭니다."
+];
+const STEP_T=[0,T_FIRE+.01,T_GO+2,Math.min(S[1].end,S[2].end)+.5,T_FF];
+const capSvg=`<svg viewBox="0 0 120 54"><rect width="120" height="54" fill="#4a5255"/><rect x="0" y="0" width="120" height="22" fill="#7d8487" opacity=".6"/><rect x="50" y="18" width="7" height="36" rx="2" fill="#151a1c"/><rect x="62" y="18" width="7" height="36" rx="2" fill="#151a1c"/><rect x="44" y="20" width="31" height="30" fill="none" stroke="#ff5a4d" stroke-width="2"/></svg>`;
+
+/* ---------- 렌더 ---------- */
+let t=0,playing=false,last=performance.now(),shown=-1;
+const slider=$("#slider");slider.max=TOTAL.toFixed(2);
+const fmt=x=>`${Math.floor(x/60)}:${String(Math.floor(x%60)).padStart(2,"0")}`;
+const off=(p,dx,dy)=>[p[0]+dx,p[1]+dy];
+function botState(k){
+  const found=(k===0||k===3)&&t>=S[k].end;
+  if(k===0&&t>=O1.t0)return{c:"ok",tag:t<O1.end?"탈출 안내":"",blink:false};
+  if(k===3&&t>=O4.t0)return{c:"ok",tag:t<O4.end?"탈출 안내":"",blink:false};
+  if(found)return{c:"crit",tag:"위치 표시",blink:true};
+  if(k===2&&t>=G3.t0)return{c:"ok",tag:t<G3.end?"소방대 안내":"",blink:false};
+  if(k===1&&t>=G2.t0)return{c:"ok",tag:t<G2.end?"소방대 안내":"",blink:false};
+  if((k===1&&t>=W2.t0)||(k===2&&t>=W3.t0))return{c:"ok",tag:(k===1?t>=W2.end:t>=W3.end)?"마중 대기":"비상구로",blink:false};
+  if(t>=T_GO)return{c:"warn",tag:"",blink:false};
+  return{c:"muted",tag:"",blink:false};
+}
+function render(){
+  const fire=t>=T_FIRE;
+  fireG.style.display=fire?"":"none";
+  smoke.setAttribute("opacity",fire?Math.min(.22,(t-T_FIRE)*.03).toFixed(3):0);
+  zoneEls.forEach(z=>z.setAttribute("opacity",fire?.14:.07));
+  for(let k=0;k<4;k++){
+    const p=rpos(k,t),st=botState(k);
+    bots[k].g.setAttribute("transform",`translate(${p[0].toFixed(1)},${p[1].toFixed(1)})`);
+    bots[k].ring.style.stroke=`var(--${st.c})`;bots[k].ring.classList.toggle("blink",st.blink);bots[k].tag.textContent=st.tag;
+    const fi=k===0?0:k===3?1:null;
+    if(fi!=null&&st.blink){const h=PEOPLE[fi].p;cones[k].setAttribute("d",`M${p[0]} ${p[1]} L${h[0]-10} ${h[1]-14} L${h[0]+10} ${h[1]+14} Z`)}else cones[k].setAttribute("d","");
+  }
+  // 요구조자
+  PEOPLE.forEach((h,i)=>{const tm=TEAM[i],O=tm.O;let q=h.p;
+    if(t>=O.t0){q=off(rpos(tm.out,Math.max(O.t0,t-2.2)),0,12)}
+    const finder=i===0?0:3,found=t>=S[finder].end;
+    pplEls[i].g.setAttribute("transform",`translate(${q[0].toFixed(1)},${q[1].toFixed(1)})`);
+    pplEls[i].lb.style.display=found&&t<O.t0?"":"none";
+    pplEls[i].g.style.display=t>=O.end+0.5?"none":"";
+  });
+  // 소방대
+  FF.forEach(f=>{const tm=TEAM[f.team];
+    if(t<T_FF){f.g.style.display="none";return}
+    f.g.style.display=t>=tm.O.end+1?"none":"";
+    let q=f.entry;
+    if(t>=tm.O.t0){q=off(rpos(tm.out,Math.max(tm.O.t0,t-f.lag-1.4)),f.lag>1?-10:10,-12)}
+    else if(t>=tm.G.t0){const r=rpos(tm.guide,Math.max(tm.G.t0,t-f.lag));q=t-f.lag<tm.G.t0?f.entry.map((v,i)=>v+(r[i]-v)*Math.min(1,(t-tm.G.t0)/f.lag)):off(r,f.lag>1?-12:12,10)}
+    f.g.setAttribute("transform",`translate(${q[0].toFixed(1)},${q[1].toFixed(1)})`)});
+  guideLines.forEach((g,i)=>g.setAttribute("opacity",t>=[G3,G2][i].t0&&t<[O1,O4][i].end?.7:0));
+  $("#clock").textContent=fmt(t);
+  if(document.activeElement!==slider)slider.value=t;
+  let st=0;STEP_T.forEach((v,i)=>{if(t>=v)st=i});
+  $("#step").innerHTML=STEPS[st];
+  ROOT.querySelectorAll("[data-st]").forEach(b=>b.classList.toggle("on",+b.dataset.st===st));
+  const vis=EV.filter(e=>e.t<=t);
+  if(vis.length!==shown){shown=vis.length;
+    const m=14*60+30+Math.floor(t/8);$("#pclock").textContent=`${Math.floor(m/60)}:${String(m%60).padStart(2,"0")}`;
+    $("#notes").innerHTML=vis.length?vis.slice().reverse().map(e=>`<div class="note ${e.kind}"><small>${fmt(e.t)} · 메카독</small><b>${e.title}</b><span>${e.body}</span>${e.cap?`<div class="cap">${capSvg}</div>`:""}</div>`).join(""):`<div class="empty">화재 신호가 오면 여기에 알림이 뜹니다</div>`;
+  }
+  $("#play").textContent=playing?"일시정지":(t>=TOTAL?"다시 재생":"재생");
+}
+let SPD=2;ROOT.querySelectorAll("[data-spd]").forEach(b=>b.addEventListener("click",()=>{SPD=+b.dataset.spd;ROOT.querySelectorAll("[data-spd]").forEach(x=>x.classList.toggle("on",x===b))}));
+function frame(now){const dt=Math.min(0.1,(now-last)/1000);last=now;if(playing){t+=dt*SPD;if(t>=TOTAL){t=TOTAL;playing=false}}render();requestAnimationFrame(frame)}
+$("#play").addEventListener("click",()=>{if(t>=TOTAL){t=0;shown=-1}playing=!playing});
+$("#reset").addEventListener("click",()=>{t=0;shown=-1;playing=true});
+ROOT.querySelectorAll("[data-st]").forEach(b=>b.addEventListener("click",()=>{t=STEP_T[+b.dataset.st];shown=-1;playing=true}));
+slider.addEventListener("input",()=>{t=+slider.value;shown=-1});
+t=G3.t0+3;playing=false; // 첫 화면: MD2·MD3이 소방대를 발견 위치로 안내하는 장면
+requestAnimationFrame(frame);
+})();
+
+
+},
+"dropped":function(ROOT){
+
+(function(){
+const CATS={
+  a:{name:"고정 설비로 대체 가능",short:"대체",desc:"센서·카메라·유도등이면 충분"},
+  b:{name:"메카독 한계",short:"한계",desc:"키 높이·고개·크기·지형"},
+  c:{name:"현장 현실성",short:"현장",desc:"실제 구조·운영·안전"},
+  d:{name:"범위·초점 문제",short:"초점",desc:"너무 좁거나 필요성이 약함"}
+};
+const ITEMS=[
+  {t:"지하주차장 EV 충전구역 전용 순찰",k:"장소",cat:["c"],
+   idea:"충전기 20면이 모인 전용 구역을 4대가 2대 순찰·2대 대기로 릴레이 순찰",
+   why:"실제 아파트 주차장은 일반 주차면 사이에 충전기가 1~2면씩 흩어져 있어서, 그런 전용 구역이 없음",
+   next:"그림부터 그리지 말고 실제 현장이 어떻게 생겼는지 먼저 확인한다",who:"직접 지적"},
+  {t:"EV 급속충전소",k:"장소",cat:["c"],
+   idea:"주차장 대신 충전소에 로봇을 두자",
+   why:"급속충전은 20~40분마다 차가 바뀌어 로봇이 밟힐 위험이 더 큼. 옥외라 연기가 빠지고 운전자도 옆에 있어 로봇이 꼭 필요하지 않음",
+   next:"로봇이 다치지 않는가와 정말 필요한가를 같이 따진다"},
+  {t:"주차블록 사이로 차 밑 진입",k:"방식",cat:["b"],
+   idea:"바퀴 사이 틈으로 들어가면 차가 출발해도 안 밟히지 않을까",
+   why:"전기차 최저지상고가 약 13~16cm라 들어갈 수 없고, 차가 출발하면 차체가 지나가며 배터리팩과 부딪힘",
+   next:"로봇의 물리적 크기·높이 한계를 먼저 따지고 방식을 정한다",who:"직접 낸 아이디어"},
+  {t:"일반 지하주차장 전체 + 충전면 중점",k:"장소",cat:["a"],
+   idea:"주차장 전체를 돌며 일반 차는 스캔, 충전면에서만 멈춰 하부 측정",
+   why:"로봇 4대로 충전면 몇 곳을 30분에 한 번 보는 셈. 충전기마다 고정 센서를 달면 더 싸고 24시간 본다",
+   next:"고정 설비로 되는 일이면 로봇은 탈락이라는 기준이 생김",who:"직접 지적 · \"안 쓰는 것만 못하다\""},
+  {t:"주차된 전기차 추적 순찰",k:"장소",cat:["d"],
+   idea:"파란 번호판으로 오늘의 전기차 위치를 찾아 그 차들만 순찰",
+   why:"전기차라는 틀에 갇혀서 다른 가능성을 못 보고 있었음",
+   next:"대상을 정하기 전에 장소 선정 기준부터 세운다",who:"직접 지적 · \"넓게 보자\""},
+  {t:"전통시장 야간 순찰",k:"장소",cat:["c","b"],
+   idea:"폐장 후 점포 멀티탭·전열기 과열 순찰, 낮에는 골목 대피 유도",
+   why:"오래된 시장이라 바닥이 울퉁불퉁함. 점포는 셔터로 닫혀 있고, 로봇이 드나들면 문을 안 잠그고 다녀야 함",
+   next:"문 없이 하나로 트인, 평평한 공간이어야 한다",who:"직접 지적"},
+  {t:"학교 · 대학 건물 야간 순찰",k:"장소",cat:["d"],
+   idea:"실제 학교에서 그대로 시연",
+   why:"시연은 가장 쉽지만 왜 꼭 로봇이 필요한지 설득력이 약함",
+   next:"시연 쉬움만으로는 안 되고 필요성이 함께 있어야 한다"},
+  {t:"전동킥보드 · 배터리 충전 공간",k:"장소",cat:["d"],
+   idea:"기숙사·복도·배달 배터리 교환소의 충전 감시",
+   why:"후보 비교에서만 나오고 더 파고들지 않음 (보류에 가까움)",
+   next:"리튬배터리라는 위험 요소는 배터리 작업장 안으로 흡수"},
+  {t:"물류창고",k:"장소",cat:["b"],
+   idea:"넓은 창고 순찰",
+   why:"적재물이 높아서 낮은 로봇 시야로는 못 봄",
+   next:"위험 요소가 바닥~허리 높이에 있어야 한다"},
+  {t:"작업장 바닥 적재 온도 순찰",k:"장소",cat:["b","c"],
+   idea:"바닥에 쌓은 배터리 팔레트 하단 온도를 순찰로 측정 (아리셀 사례 근거)",
+   why:"아리셀 사례를 직접 찾아보니 작업장도 물류처럼 배터리를 높게 쌓아 둠",
+   next:"사례는 직접 찾아보고 확인한 뒤 근거로 쓴다",who:"직접 조사"},
+  {t:"센서를 위로 기울여 랙 1~3단 측정",k:"방식",cat:["b"],
+   idea:"몸을 젖히거나 센서 각도를 올려 랙 위 칸까지 온도 측정",
+   why:"메카독을 직접 해보니 자기 키 높이까지만 보이고 고개가 위로 안 젖혀짐",
+   next:"로봇 동작은 말로 정하지 말고 직접 해본 뒤 정한다",who:"직접 테스트"},
+  {t:"로봇이 화재를 직접 감지",k:"방식",cat:["a","b"],
+   idea:"온도센서·열화상을 달아 메카독이 불을 찾음",
+   why:"높이 한계로 잘 못 보고, 부품도 사야 함. 천장 감지기와 수신기가 이미 법정 설비로 있음",
+   next:"감지는 기존 설비에 맡기고, 로봇은 그 신호를 받아 대피로 관리와 안내를 맡는다"},
+  {t:"1안 초기형 · 대피로 인솔",k:"방식",cat:["d"],
+   idea:"로봇이 대피로 시작점 근처 사람만 데리고 비상구로 감",
+   why:"대피로 위에 없던 사람(조립 라인, 사무실, 포장)은 도와주지 못함",
+   next:"갈림길에 서서 방향을 알려주는 방식으로 확장해 전원을 커버한다",who:"직접 지적 · \"대피로에 없는 사람은 못 나가?\""},
+  {t:"보안 · 설비 점검 순찰",k:"순찰 목적",cat:["d"],
+   idea:"야간 침입자 감지, 계기판·표시등 확인",
+   why:"화재 대피와 연결이 약하고, 설비 점검은 시연용 모형이 따로 필요함",
+   next:"순찰 목적은 화재 대피와 바로 이어지는 대피로 점검으로"}
+];
+const $=s=>ROOT.querySelector(s);
+let filter=null;
+function renderCats(){
+  $("#cats").innerHTML=Object.entries(CATS).map(([k,c])=>{const n=ITEMS.filter(i=>i.cat.includes(k)).length;
+    return`<button type="button" class="cat${filter===k?" on":""}" data-k="${k}" style="--cc:var(--${k})" aria-pressed="${filter===k}"><span class="n">${n}</span><b>${c.name}</b><small>${c.desc}</small></button>`}).join("");
+  ROOT.querySelectorAll(".cat").forEach(b=>b.addEventListener("click",()=>{filter=filter===b.dataset.k?null:b.dataset.k;render()}));
+}
+function renderList(){
+  const list=ITEMS.map((it,i)=>({...it,i})).filter(it=>!filter||it.cat.includes(filter));
+  $("#list").innerHTML=list.map(it=>{const main=it.cat[0];
+    return`<article class="item" style="--cc:var(--${main})"><div class="num">${String(it.i+1).padStart(2,"0")}<i></i></div>
+    <div class="body"><div class="top"><h3>${it.t}</h3><span class="kind">${it.k}</span>${it.cat.map(c=>`<span class="chip" style="--cc:var(--${c})">${CATS[c].short}</span>`).join("")}</div>
+    <dl class="rows"><dt>고민한 것</dt><dd>${it.idea}</dd><dt>뺀 이유</dt><dd class="why">${it.why}</dd></dl>
+    <div class="next"><span>그래서 이렇게 하기로</span>${it.next}</div>
+    ${it.who?`<div class="who">계기: ${it.who}</div>`:""}</div></article>`}).join("");
+  $("#filterTxt").textContent=filter?`"${CATS[filter].name}" 때문에 빠진 안 ${list.length}개`:`카드를 누르면 그 이유로 빠진 안만 봅니다. 전체 ${ITEMS.length}개`;
+  $("#clear").hidden=!filter;
+}
+function render(){renderCats();renderList()}
+$("#clear").addEventListener("click",()=>{filter=null;render()});
+render();
+})();
+
+}
+};
+const started={};
+function syncTheme(){const th=document.documentElement.getAttribute("data-theme");
+  document.querySelectorAll(".view").forEach(v=>{v.classList.toggle("force-dark",th==="dark");v.classList.toggle("force-light",th==="light")})}
+function show(key){
+  if(!RUN[key])key="plan1";
+  document.querySelectorAll(".view").forEach(v=>v.hidden=v.id!=="v-"+key);
+  document.querySelectorAll("nav.tabs a").forEach(a=>{if(a.dataset.tab===key)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")});
+  if(!started[key]){started[key]=true;const host=document.getElementById("v-"+key);const root=host.attachShadow({mode:"open"});
+    root.appendChild(document.getElementById("tpl-"+key).content.cloneNode(true));
+    try{RUN[key](root)}catch(e){console.error(e)}}
+  syncTheme();
+}
+function route(){show((location.hash||"#plan1").slice(1))}
+window.addEventListener("hashchange",()=>{route();window.scrollTo(0,0)});
+new MutationObserver(syncTheme).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+route();
+})();
+</script>
+
+</body>
+</html>
